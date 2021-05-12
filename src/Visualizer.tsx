@@ -20,7 +20,8 @@ const branchNameOffset = 18;
 
 function renderCommit(
   context: CanvasRenderingContext2D,
-  commitHash: string,
+  details: RepoDetails,
+  hash: string,
   x: number,
   y: number
 ) {
@@ -42,7 +43,27 @@ function renderCommit(
   context.font = "10px monospace";
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillText(commitHash, offset.x + x, offset.y + y);
+  context.fillText(details.commits[hash].message, offset.x + x, offset.y + y);
+  const liaison = details.commits[hash].liaison;
+  if (liaison) {
+    context.fillText(
+      `${liaison.recursiveChildren.left} ${liaison.recursiveChildren.right}`,
+      offset.x + x,
+      offset.y + y - commitRadius - 6
+    );
+  }
+}
+
+type Coor = { x: number; y: number };
+
+function drawCurveTo(context: CanvasRenderingContext2D, from: Coor, to: Coor) {
+  return;
+  context.beginPath();
+  context.lineWidth = 2;
+  context.strokeStyle = "red";
+  context.moveTo(offset.x + from.x, offset.y + from.y);
+  context.lineTo(offset.x + to.x, offset.y + to.y);
+  context.stroke();
 }
 
 function renderBranchName(
@@ -85,7 +106,6 @@ function findFirstLiaison(details: RepoDetails, hash: string): Liaison | null {
   if (i === 100) throw new Error("safety broke");
   return null;
 }
-
 export function Visualizer({ details }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -109,10 +129,9 @@ export function Visualizer({ details }: Props) {
       offsetX = canvas.width / 2;
     }
 
-    let rowIndex = 0;
     // queue of rows of commits
-    type Row = { hash: string; offsetX: number }[];
-    const queue: Row[] = [[{ hash: details.roots[0], offsetX }]];
+    type Row = { hash: string; offsetX: number; rowIndex: number }[];
+    const queue: Row[] = [[{ hash: details.roots[0], offsetX, rowIndex: 0 }]];
 
     offsetX = void 0; // offsetX tripped me up. You want commit.offsetX
 
@@ -123,9 +142,10 @@ export function Visualizer({ details }: Props) {
       for (let commit of row) {
         renderCommit(
           context,
-          details.commits[commit.hash].message,
+          details,
+          commit.hash,
           commit.offsetX,
-          rowIndex * gridSize.y
+          commit.rowIndex * gridSize.y
         );
         const children = details.commits[commit.hash].children;
         if (children.length === 0) continue;
@@ -146,6 +166,7 @@ export function Visualizer({ details }: Props) {
           nextRow.push({
             hash: children[0],
             offsetX: commit.offsetX,
+            rowIndex: commit.rowIndex + 1,
           });
         } else if (children.length % 2 === 1) {
           const middle = Math.floor(children.length / 2);
@@ -153,6 +174,7 @@ export function Visualizer({ details }: Props) {
           nextRow.push({
             hash: children[middle],
             offsetX: commit.offsetX,
+            rowIndex: commit.rowIndex + 1,
           });
           left = widths[middle] / 2;
           right = widths[middle] / 2;
@@ -162,6 +184,7 @@ export function Visualizer({ details }: Props) {
             nextRow.unshift({
               hash: children[middle - i],
               offsetX: commit.offsetX - ((left + newLeft) / 2) * gridSize.x,
+              rowIndex: commit.rowIndex + 1,
             });
             left = newLeft;
 
@@ -169,6 +192,7 @@ export function Visualizer({ details }: Props) {
             nextRow.push({
               hash: children[middle + i],
               offsetX: commit.offsetX + ((right + newRight) / 2) * gridSize.x,
+              rowIndex: commit.rowIndex + 1,
             });
             right = newRight;
           }
@@ -180,6 +204,7 @@ export function Visualizer({ details }: Props) {
             nextRow.unshift({
               hash: children[children.length / 2 - 1 - i],
               offsetX: commit.offsetX - ((left + newLeft) / 2) * gridSize.x,
+              rowIndex: commit.rowIndex + 1,
             });
             left = newLeft;
 
@@ -188,13 +213,23 @@ export function Visualizer({ details }: Props) {
             nextRow.push({
               hash: children[children.length / 2 + i],
               offsetX: commit.offsetX + ((right + newRight) / 2) * gridSize.x,
+              rowIndex: commit.rowIndex + 1,
             });
             right = newRight;
           }
         }
+        for (let nextcommit of nextRow) {
+          drawCurveTo(
+            context,
+            /*from=*/ { x: commit.offsetX, y: commit.rowIndex * gridSize.y },
+            /*to=*/ {
+              x: nextcommit.offsetX,
+              y: (commit.rowIndex + 1) * gridSize.y,
+            }
+          );
+        }
         queue.push(nextRow);
       }
-      rowIndex++;
     }
 
     // const rendered: {
