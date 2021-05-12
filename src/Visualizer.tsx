@@ -86,39 +86,6 @@ export function Visualizer({ details }: Props) {
     const rendered: {
       [key: string]: { rowIndex: number; columnIndex: number };
     } = {};
-
-    let columnIndex = 0;
-    return;
-
-    const branches = [
-      details.HEAD,
-      ...Array.from(Object.keys(details.branches)).filter(
-        (name) => name !== details.HEAD
-      ),
-    ];
-    for (let branchName of branches) {
-      let hash = details.branches[branchName];
-      renderBranchName(
-        context,
-        branchName,
-        columnIndex,
-        branchName === details.HEAD
-      );
-      let rowIndex = 0;
-      let i = 0;
-      while (hash && i < 100) {
-        i++;
-        if (i === 100) throw new Error("what the fuck");
-
-        if (!rendered[hash]) {
-          renderCommit(context, hash, columnIndex, rowIndex);
-          rendered[hash] = { rowIndex, columnIndex };
-          rowIndex++;
-        }
-        hash = details.commits[hash].children[0];
-      }
-      columnIndex++;
-    }
   });
 
   return (
