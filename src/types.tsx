@@ -13,6 +13,7 @@ export interface RepoDetails {
     };
   };
   branches: { [key: string]: string };
+  roots: string[];
   HEAD: string;
 }
 

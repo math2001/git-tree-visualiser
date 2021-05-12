@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import styled from "styled-components";
-import { RepoDetails } from "./types";
+import { Liaison, RepoDetails } from "./types";
 
 interface Props {
   details: RepoDetails;
@@ -14,7 +14,7 @@ const Canvas = styled.canvas`
   display: block;
 `;
 
-const columnSize = { x: 128, y: 78 };
+const gridSize = { x: 128, y: 78 };
 const offset = { x: 48, y: 52 };
 const commitRadius = 24;
 const branchNameOffset = 18;
@@ -22,16 +22,16 @@ const branchNameOffset = 18;
 function renderCommit(
   context: CanvasRenderingContext2D,
   commitHash: string,
-  columnIndex: number,
-  rowIndex: number
+  x: number,
+  y: number
 ) {
   context.strokeStyle = "black";
   context.fillStyle = "none";
   context.lineWidth = 2;
   context.beginPath();
   context.ellipse(
-    offset.x + columnSize.x * columnIndex,
-    offset.y + columnSize.y * rowIndex,
+    offset.x + x,
+    offset.y + y,
     commitRadius,
     commitRadius,
     0,
@@ -43,11 +43,7 @@ function renderCommit(
   context.font = "10px monospace";
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillText(
-    commitHash,
-    offset.x + columnSize.x * columnIndex,
-    offset.y + columnSize.y * rowIndex
-  );
+  context.fillText(commitHash, offset.x + x, offset.y + y);
 }
 
 function renderBranchName(
@@ -61,15 +57,34 @@ function renderBranchName(
   context.textBaseline = "bottom";
   context.fillText(
     branchName,
-    offset.x + columnSize.x * columnIndex,
+    offset.x + gridSize.x * columnIndex,
     branchNameOffset
   );
   if (isHead)
     context.fillText(
       "_".repeat(branchName.length),
-      offset.x + columnSize.x * columnIndex,
+      offset.x + gridSize.x * columnIndex,
       branchNameOffset
     );
+}
+
+function findFirstLiaison(details: RepoDetails, hash: string): Liaison | null {
+  let i = 0;
+  while (i < 100) {
+    if (details.commits[hash].children.length === 0) break;
+    else if (details.commits[hash].children.length === 1)
+      hash = details.commits[hash].children[0];
+    else {
+      const liaison = details.commits[hash].liaison;
+      if (!liaison)
+        throw new Error(
+          `liason should not be null on commit with multiple childrens ${hash}`
+        );
+      return liaison;
+    }
+  }
+  if (i === 100) throw new Error("safety broke");
+  return null;
 }
 
 export function Visualizer({ details }: Props) {
@@ -83,9 +98,93 @@ export function Visualizer({ details }: Props) {
 
     context.clearRect(0, 0, canvas.width, canvas.height);
 
-    const rendered: {
-      [key: string]: { rowIndex: number; columnIndex: number };
-    } = {};
+    if (details.roots.length !== 1) throw new Error("expect one root exactly");
+
+    let liaison = findFirstLiaison(details, details.roots[0]);
+    let offsetX;
+    if (liaison) {
+      offsetX =
+        (canvas.width * liaison.recursiveChildren.left) /
+        (liaison.recursiveChildren.left * liaison.recursiveChildren.right);
+    } else {
+      offsetX = canvas.width / 2;
+    }
+
+    let rowIndex = 0;
+    // queue of rows of commits
+    type Row = { hash: string; offsetX: number }[];
+    const queue: Row[] = [[{ hash: details.roots[0], offsetX }]];
+
+    offsetX = void 0; // offsetX tripped me up. You want commit.offsetX
+
+    while (queue.length > 0) {
+      const row = queue.shift();
+      if (!row) throw new Error("wot");
+
+      for (let commit of row) {
+        renderCommit(
+          context,
+          details.commits[commit.hash].message,
+          commit.offsetX,
+          rowIndex * gridSize.y
+        );
+        const children = details.commits[commit.hash].children;
+        if (children.length === 0) continue;
+
+        let widths = children.map((child) => {
+          const liaison = findFirstLiaison(details, child);
+          if (liaison)
+            return (
+              liaison.recursiveChildren.left + liaison.recursiveChildren.right
+            );
+          return 1;
+        }, 0);
+        const totalWidth = widths.reduce((acc, width) => acc + width, 0);
+
+        console.log(
+          details.commits[commit.hash].message,
+          children.map((child) => details.commits[child].message),
+          widths,
+          totalWidth
+        );
+        let nextRow: Row = [];
+        let left = 0;
+        let right = 0;
+        if (children.length === 1) {
+          nextRow.push({
+            hash: children[0],
+            offsetX: commit.offsetX,
+          });
+        } else if (children.length % 2 === 1) {
+          throw new Error("odd numbers not supported yet");
+        } else {
+          for (let i = 0; i < children.length / 2; i++) {
+            // left
+            const newLeft = left + widths[children.length / 2 - 1 - i];
+
+            nextRow.unshift({
+              hash: children[children.length / 2 - 1 - i],
+              offsetX: commit.offsetX - ((left + newLeft) / 2) * gridSize.x,
+            });
+            left = newLeft;
+
+            // right
+            const newRight = right + widths[children.length / 2 + i];
+            nextRow.push({
+              hash: children[children.length / 2 + i],
+              offsetX: commit.offsetX + ((right + newRight) / 2) * gridSize.x,
+            });
+            right = newRight;
+          }
+        }
+        queue.push(nextRow);
+      }
+      rowIndex++;
+    }
+
+    // const rendered: {
+    //   [key: string]: { rowIndex: number; columnIndex: number };
+    // } = {};
   });
 
   return (

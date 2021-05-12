@@ -1,8 +1,4 @@
-import {
-  isCommaListExpression,
-  reduceEachTrailingCommentRange,
-} from "typescript";
-import { InvertedRepoDetails, RepoDetails } from "./types";
+import { RepoDetails } from "./types";
 import { Visualizer } from "./Visualizer";
 
 const details: RepoDetails = {
@@ -33,61 +29,24 @@ const details: RepoDetails = {
       children: ["21789931c91538e6ff8f3a586ad91ef4ab69fad7"],
     },
   },
+  roots: ["cedd0e59c61af767c27f7447753659a3c954aaf2"],
   branches: {
-    main: "hash6",
-    "new-feature": "hash5",
+    first: "8f772f3fbdb6cbbaafda3b36a139ac162efac7cb",
+    main: "1c03d0fe4189ba16e6120d4b19d11018f75b7366",
+    second: "b3f911558a5a0999b0c3d0e9dc5b391af769d0cb",
   },
   HEAD: "main",
 };
-
-function invert(details: InvertedRepoDetails): RepoDetails {
-  const commits: { [key: string]: { children: string[]; message: string } } =
-    {};
-  for (let [hash, data] of Object.entries(details.commits)) {
-    const { parents, ...rest } = data;
-    if (!commits[hash]) {
-      commits[hash] = { ...rest, children: [] };
-    }
-    for (let parent of parents) {
-      if (!commits[parent]) {
-        commits[parent] = { ...rest, children: [] };
-      } else {
-        commits[parent].children.push(hash);
-      }
-    }
-  }
-  return {
-    ...details,
-    commits,
-  };
-}
-
-function findRootCommit(details: RepoDetails): string[] {
-  const hashes = new Set<string>();
-  const childrens = new Set<string>();
-  for (let [hash, commit] of Object.entries(details.commits)) {
-    hashes.add(hash);
-    for (let child of commit.children) {
-      childrens.add(child);
-    }
-  }
-
-  return Array.from(hashes).filter((hash) => !childrens.has(hash));
-}
 
 function makeLiaison(
   details: RepoDetails,
   root?: string
 ): { left: number; right: number } {
-  const d = (hash: string) => details.commits[hash];
-  console.log("making liaison for", root ? d(root).message : root);
   if (!root) {
-    const roots = findRootCommit(details);
-    if (roots.length !== 1) {
-      throw new Error(`expect exactly one root, got ${roots.length}`);
+    if (details.roots.length !== 1) {
+      throw new Error(`expect exactly one root, got ${details.roots.length}`);
     }
-    root = roots[0];
-    console.log("root is", d(root).message);
+    root = details.roots[0];
   }
 
   let hash: string | null = root;
@@ -109,8 +68,6 @@ function makeLiaison(
 
       let left = recursiveChildren.length / 2;
       let right = left;
-
-      console.log(commit.message, recursiveChildren);
 
       for (let i = 0; i < recursiveChildren.length; i++) {
         if (i < recursiveChildren.length / 2) {
@@ -134,13 +91,6 @@ function makeLiaison(
 
 function App() {
   makeLiaison(details);
-  for (let commit of Object.values(details.commits)) {
-    console.log(
-      commit.message,
-      commit.liaison?.recursiveChildren.left,
-      commit.liaison?.recursiveChildren.right
-    );
-  }
   return (
     <div className="App">
       <Visualizer details={details} />
