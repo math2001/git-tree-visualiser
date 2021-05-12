@@ -10,13 +10,12 @@ const Container = styled.div``;
 const Canvas = styled.canvas`
   border: 1px solid black;
   margin: 12px auto;
-  width: 640px;
   display: block;
 `;
 
-const gridSize = { x: 128, y: 78 };
-const offset = { x: 48, y: 52 };
-const commitRadius = 24;
+const gridSize = { x: 38, y: 48 };
+const offset = { x: 52, y: 52 };
+const commitRadius = 16;
 const branchNameOffset = 18;
 
 function renderCommit(
@@ -105,7 +104,7 @@ export function Visualizer({ details }: Props) {
     if (liaison) {
       offsetX =
         (canvas.width * liaison.recursiveChildren.left) /
-        (liaison.recursiveChildren.left * liaison.recursiveChildren.right);
+        (liaison.recursiveChildren.left + liaison.recursiveChildren.right);
     } else {
       offsetX = canvas.width / 2;
     }
@@ -139,14 +138,7 @@ export function Visualizer({ details }: Props) {
             );
           return 1;
         }, 0);
-        const totalWidth = widths.reduce((acc, width) => acc + width, 0);
 
-        console.log(
-          details.commits[commit.hash].message,
-          children.map((child) => details.commits[child].message),
-          widths,
-          totalWidth
-        );
         let nextRow: Row = [];
         let left = 0;
         let right = 0;
@@ -156,7 +148,30 @@ export function Visualizer({ details }: Props) {
             offsetX: commit.offsetX,
           });
         } else if (children.length % 2 === 1) {
-          throw new Error("odd numbers not supported yet");
+          const middle = Math.floor(children.length / 2);
+
+          nextRow.push({
+            hash: children[middle],
+            offsetX: commit.offsetX,
+          });
+          left = widths[middle] / 2;
+          right = widths[middle] / 2;
+
+          for (let i = 1; i <= middle; i++) {
+            const newLeft = left + widths[middle - i];
+            nextRow.unshift({
+              hash: children[middle - i],
+              offsetX: commit.offsetX - ((left + newLeft) / 2) * gridSize.x,
+            });
+            left = newLeft;
+
+            const newRight = right + widths[middle + i];
+            nextRow.push({
+              hash: children[middle + i],
+              offsetX: commit.offsetX + ((right + newRight) / 2) * gridSize.x,
+            });
+            right = newRight;
+          }
         } else {
           for (let i = 0; i < children.length / 2; i++) {
             // left
@@ -189,7 +204,7 @@ export function Visualizer({ details }: Props) {
 
   return (
     <Container>
-      <Canvas ref={canvasRef} width="640" height="480"></Canvas>
+      <Canvas ref={canvasRef} width="1024" height="840"></Canvas>
     </Container>
   );
 }
