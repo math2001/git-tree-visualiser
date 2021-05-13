@@ -1,3 +1,9 @@
+import {
+  doubleSplit,
+  quadrupleSplit,
+  tripleSplit,
+  tripleSplitNested,
+} from "./sample_repos";
 import { RepoDetails } from "./types";
 import { Visualizer } from "./Visualizer";
 
@@ -72,7 +78,7 @@ details = {
   HEAD: "master",
 };
 
-if (false)
+if (true)
   details = {
     commits: {
       f6bee074a0102f21b6f1916882bd48c65b5d8107: { message: "J6", children: [] },
@@ -223,6 +229,11 @@ if (false)
     HEAD: "second",
   };
 
+// details = doubleSplit;
+// details = tripleSplit;
+// details = tripleSplitNested;
+// details = quadrupleSplit;
+
 function makeLiaison(
   details: RepoDetails,
   root?: string
@@ -251,7 +262,9 @@ function makeLiaison(
       }
       if (commit.children.length === 0) continue;
 
-      let left = recursiveChildren.length / 2;
+      let left = Math.floor(recursiveChildren.length / 2);
+      // left = Math.ceil(recursiveChildren.length / 2);
+      // left = recursiveChildren.length / 2;
       let right = left;
 
       for (let i = 0; i < recursiveChildren.length; i++) {

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import React, { useEffect, useImperativeHandle, useRef, useState } from "react";
 import styled from "styled-components";
 import { Liaison, RepoDetails } from "./types";
 
@@ -13,8 +13,8 @@ const Canvas = styled.canvas`
   display: block;
 `;
 
-const gridSize = { x: 38, y: 48 };
-const offset = { x: 52, y: 52 };
+const gridSize = { x: 54, y: 64 };
+const offset = { x: 52, y: -42 };
 const commitRadius = 16;
 const branchNameOffset = 18;
 
@@ -57,12 +57,88 @@ function renderCommit(
 type Coor = { x: number; y: number };
 
 function drawCurveTo(context: CanvasRenderingContext2D, from: Coor, to: Coor) {
-  return;
-  context.beginPath();
+  if (false) {
+    context.beginPath();
+    context.lineWidth = 2;
+    context.strokeStyle = "grey";
+    context.moveTo(offset.x + from.x, offset.y + from.y - commitRadius);
+    // context.lineTo(offset.x + to.x, offset.y + to.y - commitRadius);
+    context.bezierCurveTo(
+      // control point 1
+      offset.x + from.x,
+      offset.y + to.y + commitRadius,
+      // control point 2
+      offset.x + to.x,
+      offset.y + from.y - commitRadius,
+      // target point
+      offset.x + to.x,
+      offset.y + to.y + commitRadius
+    );
+    context.stroke();
+  }
+
+  // first handle
+
   context.lineWidth = 2;
-  context.strokeStyle = "red";
-  context.moveTo(offset.x + from.x, offset.y + from.y);
-  context.lineTo(offset.x + to.x, offset.y + to.y);
+  context.strokeStyle = "black";
+
+  if (from.x === to.x) {
+    context.moveTo(offset.x + from.x, offset.y + from.y - commitRadius);
+    context.lineTo(offset.x + to.x, offset.y + to.y + commitRadius);
+  } else {
+    const turn = { x: 0, y: -(gridSize.y - 2 * commitRadius) / 2 };
+    turn.x = -turn.y;
+
+    turn.x *= (from.x - to.x) / Math.abs(from.x - to.x);
+
+    context.beginPath();
+    // first handle
+    context.moveTo(
+      offset.x + from.x,
+      offset.y + from.y - commitRadius
+      // p
+    );
+    const coef = 0.8;
+    context.bezierCurveTo(
+      // control point 1
+      offset.x + from.x,
+      offset.y + from.y - commitRadius + turn.y * coef,
+      // control point 2
+      offset.x + from.x - turn.x * (1 - coef),
+      offset.y + from.y - commitRadius + turn.y,
+      // target
+      offset.x + from.x - turn.x,
+      offset.y + from.y - commitRadius + turn.y
+    );
+
+    // second handle
+    context.moveTo(
+      offset.x + to.x,
+      offset.y + to.y + commitRadius
+      // p
+    );
+    context.bezierCurveTo(
+      // control point 1
+      offset.x + to.x,
+      offset.y + to.y + commitRadius - turn.y,
+      // control point 2
+      offset.x + to.x,
+      offset.y + to.y + commitRadius - turn.y,
+      // target
+      offset.x + to.x + turn.x,
+      offset.y + to.y + commitRadius - turn.y
+    );
+
+    // line in between
+    context.moveTo(
+      offset.x + from.x - turn.x,
+      offset.y + from.y - commitRadius + turn.y
+    );
+    context.lineTo(
+      offset.x + to.x + turn.x,
+      offset.y + to.y + commitRadius - turn.y
+    );
+  }
   context.stroke();
 }
 
@@ -125,6 +201,7 @@ export function Visualizer({ details }: Props) {
       offsetX =
         (canvas.width * liaison.recursiveChildren.left) /
         (liaison.recursiveChildren.left + liaison.recursiveChildren.right);
+      offsetX -= offset.x;
     } else {
       offsetX = canvas.width / 2;
     }
@@ -145,7 +222,7 @@ export function Visualizer({ details }: Props) {
           details,
           commit.hash,
           commit.offsetX,
-          commit.rowIndex * gridSize.y
+          context.canvas.height - commit.rowIndex * gridSize.y
         );
         const children = details.commits[commit.hash].children;
         if (children.length === 0) continue;
@@ -176,14 +253,15 @@ export function Visualizer({ details }: Props) {
             offsetX: commit.offsetX,
             rowIndex: commit.rowIndex + 1,
           });
-          left = widths[middle] / 2;
-          right = widths[middle] / 2;
+          // left = widths[middle] / 2;
+          // right = widths[middle] / 2;
 
           for (let i = 1; i <= middle; i++) {
             const newLeft = left + widths[middle - i];
             nextRow.unshift({
               hash: children[middle - i],
-              offsetX: commit.offsetX - ((left + newLeft) / 2) * gridSize.x,
+              offsetX:
+                commit.offsetX - (left + widths[middle - i]) * gridSize.x,
               rowIndex: commit.rowIndex + 1,
             });
             left = newLeft;
@@ -191,12 +269,15 @@ export function Visualizer({ details }: Props) {
             const newRight = right + widths[middle + i];
             nextRow.push({
               hash: children[middle + i],
-              offsetX: commit.offsetX + ((right + newRight) / 2) * gridSize.x,
+              offsetX:
+                commit.offsetX + (right + widths[middle + i]) * gridSize.x,
               rowIndex: commit.rowIndex + 1,
             });
             right = newRight;
           }
         } else {
+          // left = 0.5;
+          // right = 0.5;
           for (let i = 0; i < children.length / 2; i++) {
             // left
             const newLeft = left + widths[children.length / 2 - 1 - i];
@@ -221,10 +302,13 @@ export function Visualizer({ details }: Props) {
         for (let nextcommit of nextRow) {
           drawCurveTo(
             context,
-            /*from=*/ { x: commit.offsetX, y: commit.rowIndex * gridSize.y },
+            /*from=*/ {
+              x: commit.offsetX,
+              y: context.canvas.height - commit.rowIndex * gridSize.y,
+            },
             /*to=*/ {
               x: nextcommit.offsetX,
-              y: (commit.rowIndex + 1) * gridSize.y,
+              y: context.canvas.height - (commit.rowIndex + 1) * gridSize.y,
             }
           );
         }
@@ -237,9 +321,26 @@ export function Visualizer({ details }: Props) {
     // } = {};
   });
 
+  const [pos, setPos] = useState([0, 0]);
+
   return (
     <Container>
-      <Canvas ref={canvasRef} width="1024" height="840"></Canvas>
+      <p>
+        <code>
+          [{pos[0]}, {pos[1]}]
+        </code>
+      </p>
+      <Canvas
+        ref={canvasRef}
+        width="1024"
+        height="840"
+        onMouseMove={(e) => {
+          setPos([
+            e.pageX - (e.target as HTMLElement).offsetLeft,
+            e.pageY - (e.target as HTMLElement).offsetTop,
+          ]);
+        }}
+      ></Canvas>
     </Container>
   );
 }
