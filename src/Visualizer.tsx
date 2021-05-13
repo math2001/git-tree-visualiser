@@ -164,6 +164,31 @@ function renderBranchName(
     );
 }
 
+function canGuaranteeCorrectness(details: RepoDetails) {
+  let i = 0;
+  let queue = [details.roots[0]];
+  let hasSplitOff = false;
+  while (queue.length > 0 && i < 100) {
+    i++;
+    const hash = queue.shift();
+    if (!hash) throw new Error("wot?");
+
+    if (details.commits[hash].children.length === 2) {
+      if (hasSplitOff) {
+        return false;
+      }
+      hasSplitOff = true;
+      for (let child of details.commits[hash].children) {
+        queue.push(child);
+      }
+    } else if (details.commits[hash].children.length === 1) {
+      queue.push(details.commits[hash].children[0]);
+    }
+  }
+  if (i === 100) throw new Error("safety broken");
+  return true;
+}
+
 function findFirstLiaison(details: RepoDetails, hash: string): Liaison | null {
   let i = 0;
   while (i < 100) {
@@ -277,8 +302,8 @@ export function Visualizer({ details }: Props) {
             right = newRight;
           }
         } else {
-          // left = 0.5;
-          // right = 0.5;
+          left = 0.5;
+          right = 0.5;
           for (let i = 0; i < children.length / 2; i++) {
             // left
             const newLeft = left + widths[children.length / 2 - 1 - i];
@@ -326,6 +351,16 @@ export function Visualizer({ details }: Props) {
 
   return (
     <Container>
+      {!canGuaranteeCorrectness(details) && (
+        <article>
+          <p>
+            Uh uh. Your repository might be to complex... The rendering
+            algorithm is quite silly because it was written by me, and it
+            doesn't guarantee that it'll show you the correct representation of
+            your commit graph.
+          </p>
+        </article>
+      )}
       <p>
         <code>
           [{pos[0]}, {pos[1]}]

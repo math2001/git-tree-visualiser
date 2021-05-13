@@ -230,7 +230,7 @@ if (true)
     HEAD: "second",
   };
 
-// details = doubleNestedSplit;
+details = doubleNestedSplit;
 details = doubleSplit;
 // details = tripleSplit;
 // details = tripleSplitNested;
@@ -264,8 +264,8 @@ function makeLiaison(
       }
       if (commit.children.length === 0) continue;
 
-      let left = 0;
-      let right = 0;
+      let right = recursiveChildren.length / 2;
+      let left = right;
 
       for (let i = 0; i < recursiveChildren.length; i++) {
         if (i < recursiveChildren.length / 2) {
