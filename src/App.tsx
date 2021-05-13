@@ -1,4 +1,5 @@
 import {
+  doubleNestedSplit,
   doubleSplit,
   quadrupleSplit,
   tripleSplit,
@@ -229,7 +230,8 @@ if (true)
     HEAD: "second",
   };
 
-// details = doubleSplit;
+// details = doubleNestedSplit;
+details = doubleSplit;
 // details = tripleSplit;
 // details = tripleSplitNested;
 // details = quadrupleSplit;
@@ -262,10 +264,8 @@ function makeLiaison(
       }
       if (commit.children.length === 0) continue;
 
-      let left = Math.floor(recursiveChildren.length / 2);
-      // left = Math.ceil(recursiveChildren.length / 2);
-      // left = recursiveChildren.length / 2;
-      let right = left;
+      let left = 0;
+      let right = 0;
 
       for (let i = 0; i < recursiveChildren.length; i++) {
         if (i < recursiveChildren.length / 2) {

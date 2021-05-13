@@ -198,9 +198,10 @@ export function Visualizer({ details }: Props) {
     let liaison = findFirstLiaison(details, details.roots[0]);
     let offsetX;
     if (liaison) {
-      offsetX =
-        (canvas.width * liaison.recursiveChildren.left) /
-        (liaison.recursiveChildren.left + liaison.recursiveChildren.right);
+      offsetX = canvas.width / 2;
+      // offsetX =
+      //   (canvas.width * liaison.recursiveChildren.left) /
+      //   (liaison.recursiveChildren.left + liaison.recursiveChildren.right);
       offsetX -= offset.x;
     } else {
       offsetX = canvas.width / 2;

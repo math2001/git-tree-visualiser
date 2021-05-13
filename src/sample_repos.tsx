@@ -31,6 +31,41 @@ export const doubleSplit: RepoDetails = {
   },
 };
 
+export const doubleNestedSplit: RepoDetails = {
+  roots: ["root"],
+  HEAD: "main",
+  branches: {
+    main: "hashA1",
+    first: "hashB1",
+  },
+  commits: {
+    root: {
+      message: "root",
+      children: ["hashA", "hashB"],
+    },
+    hashA: {
+      message: "A",
+      children: ["hashA1"],
+    },
+    hashB: {
+      message: "B",
+      children: ["hashB1", "hashB2"],
+    },
+    hashA1: {
+      message: "A1",
+      children: [],
+    },
+    hashB1: {
+      message: "B1",
+      children: [],
+    },
+    hashB2: {
+      message: "B2",
+      children: [],
+    },
+  },
+};
+
 export const tripleSplit: RepoDetails = {
   roots: ["root"],
   HEAD: "main",
