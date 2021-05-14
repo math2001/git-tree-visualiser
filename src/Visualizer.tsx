@@ -41,16 +41,31 @@ function renderCommitAndLinks(
   c.fillText(details.commits[hash].message, coord.x, coord.y);
 
   c.beginPath();
+  const parentY = Math.min(...parents.map((p) => p.y));
   for (let parent of parents) {
     c.moveTo(coord.x, coord.y + commitRadius);
+    const diff = parentY - coord.y - 2 * commitRadius;
+    const coef = 1;
+    const cp1 = [coord.x, coord.y + commitRadius + diff * coef];
+    const cp2 = [parent.x, parentY - commitRadius - diff * coef];
     c.bezierCurveTo(
-      coord.x,
-      coord.y + commitRadius,
+      cp1[0],
+      cp1[1],
+      cp2[0],
+      cp2[1],
       parent.x,
-      parent.y - commitRadius,
-      parent.x,
-      parent.y - commitRadius
+      parentY - commitRadius
     );
+    if (parent.y !== parentY) {
+      c.moveTo(parent.x, parentY - commitRadius);
+      c.lineTo(parent.x, parent.y - commitRadius);
+    }
+    if (/*display control points=*/ false) {
+      c.moveTo(cp1[0], cp1[1]);
+      c.ellipse(cp1[0], cp1[1], 1, 1, 0, 0, 2 * Math.PI);
+      c.moveTo(cp2[0], cp2[1]);
+      c.ellipse(cp2[0], cp2[1], 1, 1, 0, 0, 2 * Math.PI);
+    }
   }
   c.stroke();
 
@@ -190,7 +205,7 @@ export function Visualizer({ details }: Props) {
       </p>
       <Canvas
         ref={canvasRef}
-        width="1024"
+        width="256"
         height="840"
         onMouseMove={(e) => {
           setPos([
