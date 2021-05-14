@@ -2,8 +2,10 @@ import {
   doubleNestedSplit,
   doubleSplit,
   quadrupleSplit,
+  simpleMerge,
   tripleSplit,
   tripleSplitNested,
+  unevenMerge,
 } from "./sample_repos";
 import { RepoDetails } from "./types";
 import { Visualizer } from "./Visualizer";
@@ -235,6 +237,8 @@ details = doubleSplit;
 // details = tripleSplit;
 // details = tripleSplitNested;
 // details = quadrupleSplit;
+details = simpleMerge;
+details = unevenMerge
 
 function makeLiaison(
   details: RepoDetails,
