@@ -1,5 +1,6 @@
 import json
 import subprocess
+from collections import deque
 
 # sparse: don't remove duplicate branches
 lines = (
@@ -24,6 +25,7 @@ for line in lines:
         "children": list(
             sorted(children)
         ),  # sort (remember, these are commit hash) to get consistent graphs
+        "parents": [],
     }
     all_hashes.add(hash)
     for child in children:
@@ -35,12 +37,20 @@ for line in subprocess.check_output(["git", "show-ref"]).decode("utf-8").splitli
     if ref.startswith("refs/heads/"):
         branches[ref.replace("refs/heads/", "")] = hash
 
+roots = list(all_hashes - all_children)
+q = deque(roots)
+while q:
+    hash = q.popleft()
+    for child_hash in commits[hash]["children"]:
+        commits[child_hash]["parents"].append(hash)
+        q.append(child_hash)
+
 
 print(
     json.dumps(
         {
             "commits": commits,
-            "roots": list(all_hashes - all_children),
+            "roots": roots,
             "branches": branches,
             "HEAD": subprocess.check_output(["git", "symbolic-ref", "HEAD"])
             .decode("utf-8")

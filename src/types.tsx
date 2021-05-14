@@ -1,15 +1,9 @@
-export interface InvertedRepoDetails {
-  commits: { [hash: string]: { message: string; parents: string[] } };
-  branches: { [key: string]: string };
-  HEAD: string;
-}
-
 export interface RepoDetails {
   commits: {
     [hash: string]: {
       message: string;
       children: string[];
-      liaison?: Liaison;
+      parents: string[];
     };
   };
   branches: { [key: string]: string };
@@ -17,6 +11,7 @@ export interface RepoDetails {
   HEAD: string;
 }
 
-export interface Liaison {
-  recursiveChildren: { left: number; right: number };
+export interface Coord {
+  x: number;
+  y: number;
 }
