@@ -137,12 +137,6 @@ export function Visualizer({ details }: Props) {
         // if parent has two children, or there is a branch pointing the the parent commit
         // we branch off
         const siblings = details.commits[parent].children;
-        console.log(
-          details.commits[hash].message,
-          hash,
-          siblings.length,
-          details.branches
-        );
         if (
           siblings.length === 2 ||
           Object.values(details.branches).includes(parent)
