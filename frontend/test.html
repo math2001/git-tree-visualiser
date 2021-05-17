@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/xterm.min.css"
+    />
+  </head>
+  <body>
+    <div id="div"></div>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/xterm.min.js"></script> -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/xterm@4.12.0/lib/xterm.min.js"></script> -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/xterm-addon-attach@0.6.0/lib/xterm-addon-attach.min.js"></script> -->
+    <script src="node_modules/xterm/lib/xterm.js"></script>
+    <script src="node_modules/xterm-addon-attach/lib/xterm-addon-attach.js"></script>
+    <script>
+      async function run() {
+        const host = "localhost:8081";
+        const socket = new WebSocket(`ws://${host}/attach`);
+        const term = new Terminal();
+        const addon = new AttachAddon.AttachAddon(socket, {
+          bidrectional: true,
+        });
+        term.loadAddon(addon);
+        term.open(div);
+      }
+      run();
+    </script>
+  </body>
+</html>
