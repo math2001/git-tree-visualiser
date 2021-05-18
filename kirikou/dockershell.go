@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -59,43 +60,31 @@ func main() {
 			panic(err)
 		}
 
-		c2, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-		fmt.Println("here")
-		resch, errch := cli.ContainerWait(c2, createResp.ID, container.WaitConditionNotRunning)
-		fmt.Println("here")
-		select {
-		case err := <-errch:
-			fmt.Println(err)
-		case res := <-resch:
-			fmt.Println("THE CONTAINER PROBABLY EXITED!!")
-			fmt.Println("result", res.Error, res.StatusCode)
-		}
-		fmt.Println("continue")
-		done := make(chan struct{})
+		done := make(chan string)
 
 		// read from the container, and write to the socket
 		go func() {
 			defer func() {
-				done <- struct{}{}
+				conn.Close()
+				done <- "read from container->socket"
 			}()
 			buf := make([]byte, 4096)
 			for {
 				// n, err := io.ReadAtLeast(attachResp.Reader, buf, 1)
 				n, err := attachResp.Reader.Read(buf)
+				if err == io.EOF || errors.Is(err, net.ErrClosed) {
+					return
+				}
 				if err != nil && err != io.EOF {
 					// if websocket.IsCloseError(err) {
 					// 	if we
 					// }
+					log.Printf("%#v", err)
 					panic(err)
-				}
-				if err == io.EOF {
-					return
 				}
 				if n == 0 {
 					panic("read 0 but no EOF")
 				}
-				fmt.Println("read", buf[:n])
 				if err := conn.WriteMessage(websocket.BinaryMessage, buf[:n]); err != nil {
 					panic(err)
 				}
@@ -105,10 +94,14 @@ func main() {
 		// read from the socket and write to the container
 		go func() {
 			defer func() {
-				done <- struct{}{}
+				if err := conn.Close(); err != nil {
+					log.Println(err)
+				}
+				attachResp.Close()
+				done <- "read from socket->container"
 			}()
 			for {
-				messageType, bytes, err := conn.ReadMessage()
+				_, bytes, err := conn.ReadMessage()
 				if err != nil {
 					if closeErr, ok := err.(*websocket.CloseError); ok {
 						log.Println(closeErr)
@@ -116,7 +109,6 @@ func main() {
 					}
 					panic(err)
 				}
-				fmt.Printf("message %q type (binary=%d text=%d): %d\n", bytes, websocket.BinaryMessage, websocket.TextMessage, messageType)
 				n := 0
 				for n < len(bytes) {
 					m, err := attachResp.Conn.Write(bytes)
@@ -131,7 +123,7 @@ func main() {
 		<-done
 		<-done
 		close(done)
-
+		log.Println("Exited properly")
 	})
 	fmt.Println("listening...")
 	http.ListenAndServe("localhost:8081", nil)
