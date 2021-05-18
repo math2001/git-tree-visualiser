@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -83,6 +84,9 @@ func main() {
 				// n, err := io.ReadAtLeast(attachResp.Reader, buf, 1)
 				n, err := attachResp.Reader.Read(buf)
 				if err != nil && err != io.EOF {
+					// if websocket.IsCloseError(err) {
+					// 	if we
+					// }
 					panic(err)
 				}
 				if err == io.EOF {
@@ -106,6 +110,10 @@ func main() {
 			for {
 				messageType, bytes, err := conn.ReadMessage()
 				if err != nil {
+					if closeErr, ok := err.(*websocket.CloseError); ok {
+						log.Println(closeErr)
+						return
+					}
 					panic(err)
 				}
 				fmt.Printf("message %q type (binary=%d text=%d): %d\n", bytes, websocket.BinaryMessage, websocket.TextMessage, messageType)
@@ -125,5 +133,6 @@ func main() {
 		close(done)
 
 	})
+	fmt.Println("listening...")
 	http.ListenAndServe("localhost:8081", nil)
 }

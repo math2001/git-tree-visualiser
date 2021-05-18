@@ -18,17 +18,17 @@
     <script src="node_modules/xterm/lib/xterm.js"></script>
     <script src="node_modules/xterm-addon-attach/lib/xterm-addon-attach.js"></script>
     <script>
-      async function run() {
-        const host = "localhost:8081";
-        const socket = new WebSocket(`ws://${host}/attach`);
-        const term = new Terminal();
-        const addon = new AttachAddon.AttachAddon(socket, {
-          bidrectional: true,
-        });
-        term.loadAddon(addon);
-        term.open(div);
-      }
-      run();
+      const host = "localhost:8081";
+      const socket = new WebSocket(`ws://${host}/attach`);
+      const term = new Terminal();
+      const addon = new AttachAddon.AttachAddon(socket, {
+        bidrectional: true,
+      });
+      term.loadAddon(addon);
+      term.open(div);
+      window.addEventListener("beforeunload", (e) => {
+        socket.close();
+      });
     </script>
   </body>
 </html>
