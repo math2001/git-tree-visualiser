@@ -8,8 +8,8 @@ import { assert } from "./utils";
 import "./xterm.css";
 
 const Container = styled.div`
-  border: 1px solid red;
-  // width: 50%;
+  width: 50%;
+  height: 100%;
 `;
 
 function useOnResizeEnd(cb: (e: UIEvent) => void, delayms: number = 100) {
@@ -86,11 +86,9 @@ export function Terminal() {
     socket.send(buffer);
   };
   // @ts-ignore
-  window.socketSend = (data) => socket.send(data);
+  window.proposeDim = () => {
+    console.log(fitAddon.proposeDimensions());
+  };
 
-  return (
-    <Container>
-      <div ref={ref}></div>
-    </Container>
-  );
+  return <Container ref={ref}></Container>;
 }

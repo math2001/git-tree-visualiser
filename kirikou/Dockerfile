@@ -3,6 +3,6 @@ FROM ubuntu:latest
 RUN apt-get update
 RUN apt-get install -y vim git tmux
 
-COPY resize.go /resize
+COPY install.sh install.sh
 
 CMD ["bash"]

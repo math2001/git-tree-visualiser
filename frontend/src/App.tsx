@@ -1,38 +1,29 @@
-import React from "react";
+import React, { useState } from "react";
+import styled from "styled-components";
+import { simpleMerge } from "./sample_repos";
 import { Terminal } from "./Terminal";
+import { RepoDetails } from "./types";
+import { Visualizer } from "./Visualizer";
 
-function App() {
-  return <Terminal />;
-  // const [details, setDetails] = useState<RepoDetails | null>(null);
+const Container = styled.div`
+  height: 100vh;
+`;
 
-  // const fetchUpdates = async () => {
-  //   const response = await fetch("http://localhost:8080/api/get-repo-details");
-  //   if (response.status !== 200) {
-  //     throw new Error(await response.text());
-  //   }
-  //   const body = await response.json();
-  //   setDetails(body);
-  // };
+export default function App() {
+  const [details, setDetails] = useState<RepoDetails | null>(null);
 
-  // useEffect(() => {
-  //   let interval: number;
-  //   interval = window.setInterval(() => {
-  //     fetchUpdates().catch((e) => {
-  //       console.error(e);
-  //       clearInterval(interval);
-  //     });
-  //   }, 100);
-  //   return () => {
-  //     clearInterval(interval);
-  //   };
-  // });
-  // return (
-  //   <div className="App">
-  //     {(details && <Visualizer details={details} />) || (
-  //       <p>Details loading...</p>
-  //     )}
-  //   </div>
-  // );
+  if (details === null) {
+    setDetails(simpleMerge);
+  }
+
+  if (details === null) {
+    return <p>Loading, please wait</p>;
+  }
+
+  return (
+    <Container>
+      <Terminal />
+      <Visualizer details={details} />
+    </Container>
+  );
 }
-
-export default App;
