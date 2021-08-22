@@ -1,5 +1,2 @@
-run: backend
-	sudo ./backend
-
-backend: backend.go
-	go build -o backend backend.go
+run:
+	go build -o backend && sudo ./backend

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/docker/docker/api/types"
@@ -15,6 +16,7 @@ import (
 
 func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 	userID := UserID(uuid.NewString())
+	log.Printf("attach for %q\n", userID)
 	conn, err := app.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		panic(err)

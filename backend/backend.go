@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"log"
 	"net/http"
 	"sync"
 
@@ -40,8 +41,9 @@ func NewApp() (*App, error) {
 	}
 
 	return &App{
-		client: client,
-		users:  make(map[UserID]*UserInfo),
+		client:     client,
+		users:      make(map[UserID]*UserInfo),
+		containers: make(map[ContainerID]int),
 		upgrader: &websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				// TODO: actually check if the origin is valid
@@ -55,6 +57,7 @@ func (app *App) Run() {
 	http.HandleFunc("/attach", app.attach)
 	http.HandleFunc("/resize", app.resize)
 	http.HandleFunc("/repo-details", app.repoDetails)
+	log.Println("Starting server on localhost:8081")
 	http.ListenAndServe("localhost:8081", nil)
 }
 
