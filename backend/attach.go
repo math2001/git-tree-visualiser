@@ -50,8 +50,9 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 
 	app.lock.Lock()
 	app.users[userID] = &UserInfo{
-		ExecID:  ExecID(execResp.ID),
-		Channel: nil,
+		ShellExecID:  ExecID(execResp.ID),
+		ContainerID:  containerID,
+		RunnerNumber: runnerNumber,
 	}
 	app.lock.Unlock()
 
@@ -184,9 +185,7 @@ func (app *App) reserveSpotContainer(ctx context.Context, userID UserID) (Contai
 		Tty:             true,
 		OpenStdin:       true,
 		NetworkDisabled: true,
-	}, &container.HostConfig{
-		ReadonlyRootfs: true,
-	}, nil, nil, "")
+	}, &container.HostConfig{}, nil, nil, "")
 	if err != nil {
 		return "", 0, err
 	}

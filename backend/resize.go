@@ -43,7 +43,7 @@ func (app *App) resize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	execID := infos.ExecID
+	execID := infos.ShellExecID
 
 	if err := app.client.ContainerExecResize(context.Background(), string(execID), types.ResizeOptions{
 		Width:  details.Width,

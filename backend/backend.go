@@ -20,7 +20,11 @@ type ExecID string
 const MAX_USERS_PER_CONTAINER = 100
 
 type UserInfo struct {
-	ExecID  ExecID
+	ShellExecID   ExecID
+	WatcherExecID ExecID
+	ContainerID   ContainerID
+	RunnerNumber  int
+
 	Channel chan struct{}
 }
 
