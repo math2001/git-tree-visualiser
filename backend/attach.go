@@ -56,6 +56,7 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 	if err := conn.WriteMessage(websocket.TextMessage, []byte(userID)); err != nil {
 		panic(err)
 	}
+	log.Printf("[container %s]: send userid on socket", containerID)
 
 	attachResp, err := app.client.ContainerExecAttach(ctx, execResp.ID, types.ExecStartCheck{
 		Tty: true,
@@ -151,6 +152,7 @@ func (app *App) reserveSpotContainer(ctx context.Context, userID UserID) (Contai
 
 	if max != "" {
 		app.containers[max] += 1
+		app.lock.Unlock()
 		return max, nil
 	}
 
