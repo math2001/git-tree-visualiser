@@ -180,12 +180,12 @@ func (app *App) reserveSpotContainer(ctx context.Context, userID UserID) (Contai
 
 	// create a new container
 	createResp, err := app.client.ContainerCreate(ctx, &container.Config{
-		Image:     "kirikou",
-		Tty:       true,
-		OpenStdin: true,
-		// NetworkDisabled: true,
+		Image:           "kirikou",
+		Tty:             true,
+		OpenStdin:       true,
+		NetworkDisabled: true,
 	}, &container.HostConfig{
-		// ReadonlyRootfs: true,
+		ReadonlyRootfs: true,
 	}, nil, nil, "")
 	if err != nil {
 		return "", 0, err
