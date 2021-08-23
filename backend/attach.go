@@ -28,18 +28,20 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	ctx := context.Background()
-	containerID, err := app.reserveSpotContainer(ctx, userID)
+	containerID, runnerNumber, err := app.reserveSpotContainer(ctx, userID)
 	if err != nil {
 		panic(err)
 	}
 	defer app.releaseSpotContainer(containerID)
 
 	execResp, err := app.client.ContainerExecCreate(ctx, string(containerID), types.ExecConfig{
+		User:         fmt.Sprintf("runner-%d", runnerNumber),
+		WorkingDir:   fmt.Sprintf("/home/runner-%d", runnerNumber),
 		Tty:          true,
 		AttachStdin:  true,
 		AttachStderr: true,
 		AttachStdout: true,
-		Cmd:          []string{"bash"},
+		Cmd:          []string{"bash", "--login"},
 	})
 	if err != nil {
 		panic(err)
@@ -155,7 +157,7 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 // has any user available, a new container is spawned.
 //
 // ref MAX_USERS_PER_CONTAINER
-func (app *App) reserveSpotContainer(ctx context.Context, userID UserID) (ContainerID, error) {
+func (app *App) reserveSpotContainer(ctx context.Context, userID UserID) (ContainerID, int, error) {
 	app.lock.Lock()
 
 	// we try to minimize the number of containers we have
@@ -168,9 +170,10 @@ func (app *App) reserveSpotContainer(ctx context.Context, userID UserID) (Contai
 	}
 
 	if max != "" {
+		runnerNumber := app.containers[max]
 		app.containers[max] += 1
 		app.lock.Unlock()
-		return max, nil
+		return max, runnerNumber, nil
 	}
 
 	app.lock.Unlock()
@@ -185,13 +188,13 @@ func (app *App) reserveSpotContainer(ctx context.Context, userID UserID) (Contai
 		// ReadonlyRootfs: true,
 	}, nil, nil, "")
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 	log.Printf("Created container %s", createResp.ID)
 
 	err = app.client.ContainerStart(ctx, createResp.ID, types.ContainerStartOptions{})
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 	log.Printf("Started container %s", createResp.ID)
 
@@ -199,7 +202,7 @@ func (app *App) reserveSpotContainer(ctx context.Context, userID UserID) (Contai
 	app.containers[ContainerID(createResp.ID)] = 1
 	app.lock.Unlock()
 
-	return ContainerID(createResp.ID), nil
+	return ContainerID(createResp.ID), 0, nil
 }
 
 func (app *App) releaseSpotContainer(containerID ContainerID) {

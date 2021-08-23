@@ -1,6 +1,6 @@
 # Build the image
 
-    kirkou # docker image build --rm -t kirikou .
+    kirkou # docker image build -t kirikou .
 
 # Start the container
 

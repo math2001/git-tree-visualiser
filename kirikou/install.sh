@@ -12,5 +12,7 @@ addgroup runners
 
 for ((i=0; i<$NUMBER_USER;i++))
 do
-        useradd --create-home --no-user-group --system "runner-$i"
+        useradd --create-home --groups=runners --no-user-group --system "runner-$i"
 done
+
+echo "umask u=rw,g=,o=" >> /etc/profile.d/02-set-umask.sh
