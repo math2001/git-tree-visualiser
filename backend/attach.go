@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -58,7 +57,6 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	time.Sleep(1 * time.Second)
 	attachResp, err := app.client.ContainerExecAttach(ctx, execResp.ID, types.ExecStartCheck{
 		Tty: true,
 	})
@@ -181,8 +179,6 @@ func (app *App) reserveSpotContainer(ctx context.Context, userID UserID) (Contai
 	app.lock.Lock()
 	app.containers[ContainerID(createResp.ID)] = 1
 	app.lock.Unlock()
-
-	time.Sleep(1 * time.Second)
 
 	return ContainerID(createResp.ID), nil
 }
