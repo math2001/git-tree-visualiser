@@ -27,15 +27,40 @@ type Commit struct {
 	Parents  []string `json:"parents"`
 }
 
+const usage = `usage: ./watcher /path/to/git-repo <gap>
+
+Watches the folder for any fs event (create, rename, remove or write). As soon
+as one occurs, it drains them all until there is time-gap of <gap> without any
+event, analyses the git repository and prints the result as JSON object to
+stdout.
+
+Gap is a duration parsed with time.ParseDuration (for example 500ms or 2s500ms)
+`
+
 func main() {
 	enc := json.NewEncoder(os.Stdout)
 	signal := make(chan notify.EventInfo, 1)
+
+	if len(os.Args) != 3 {
+		fmt.Printf(usage)
+		os.Exit(1)
+	}
+
+	gap, err := time.ParseDuration(os.Args[2])
+	if err != nil {
+		enc.Encode(map[string]string{
+			"type":    "error",
+			"details": fmt.Sprintf("invalid duration %s: %s", os.Args[2], err),
+		})
+		os.Exit(1)
+	}
 
 	if err := os.Chdir(os.Args[1]); err != nil {
 		enc.Encode(map[string]string{
 			"type":    "error",
 			"details": fmt.Sprintf("chdir: %w", err),
 		})
+		os.Exit(1)
 	}
 
 	if err := notify.Watch("./...", signal, notify.All); err != nil {
@@ -43,6 +68,7 @@ func main() {
 			"type":    "error",
 			"details": fmt.Sprintf("notify.Watch: %s", err),
 		})
+		os.Exit(1)
 	}
 
 	stdin := make(chan struct{})
@@ -52,7 +78,7 @@ func main() {
 		case <-stdin:
 			os.Exit(0)
 		case <-signal:
-			drainTillWindow(signal, 100*time.Millisecond)
+			drainTillGap(signal, gap)
 			err := printRepoDetails(enc)
 			if err != nil {
 				enc.Encode(map[string]interface{}{
@@ -72,11 +98,11 @@ func readFromStdin(stdin chan<- struct{}) {
 	close(stdin)
 }
 
-// drains until we get <window> amount of time without a single event
-// returns the number of drained events (for fun)
-func drainTillWindow(signal <-chan notify.EventInfo, window time.Duration) int {
+// Drains until we get <gap> amount of time without a single event.
+// Returns the number of drained events (for fun)
+func drainTillGap(signal <-chan notify.EventInfo, gap time.Duration) int {
 	n := 0
-	timer := time.NewTimer(window)
+	timer := time.NewTimer(gap)
 	for {
 		select {
 		case <-signal:
@@ -98,7 +124,7 @@ func drainTillWindow(signal <-chan notify.EventInfo, window time.Duration) int {
 			if !timer.Stop() {
 				<-timer.C
 			}
-			timer.Reset(window)
+			timer.Reset(gap)
 
 		case <-timer.C:
 			return n
