@@ -15,6 +15,12 @@ func (app *App) resize(w http.ResponseWriter, r *http.Request) {
 		Width  uint
 		Height uint
 	}
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]interface{}{"details": "expects POST"})
+		return
+	}
+
 	if r.Header.Get("Content-Type") != "application/json" {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]interface{}{"details": "expect JSON"})
@@ -45,4 +51,5 @@ func (app *App) resize(w http.ResponseWriter, r *http.Request) {
 	}); err != nil {
 		panic(err)
 	}
+	log.Printf("[exec %s]: resize %dx%d", execID, details.Width, details.Height)
 }

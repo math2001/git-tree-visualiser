@@ -51,9 +51,17 @@ export function Terminal() {
       // once we have the user id, listen for resize events
       term.onResize(async ({ rows, cols }) => {
         console.log("resize cb!", userID, rows, cols);
-        const response = await fetch(
-          `http://localhost:8081/resize?width=${cols}&height=${rows}&user-id=${userID}`
-        );
+        const response = await fetch("http://localhost:8081/resize", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            width: cols,
+            height: rows,
+            userID: userID,
+          }),
+        });
         if (response.status !== 200) {
           const body = await response.text();
           alert(`invalid resize response: ${body}`);
