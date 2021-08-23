@@ -2,7 +2,7 @@
 
 if test "$(hostname)" = "inspirux"
 then
-        echo "running on host machine"
+        echo "running on host machine, this should run on the kirikou instance containers"
         exit
 fi
 

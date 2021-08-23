@@ -1,5 +1,10 @@
 import { createRef, useEffect } from "react";
 import styled from "styled-components";
+import { Terminal as XTermTerminal } from "xterm";
+import { AttachAddon } from "xterm-addon-attach";
+import { FitAddon } from "xterm-addon-fit";
+import { Unicode11Addon } from "xterm-addon-unicode11";
+import { assert } from "./utils";
 import "./xterm.css";
 
 const Container = styled.div`
@@ -26,48 +31,49 @@ function useOnResizeEnd(cb: (e: UIEvent) => void, delayms: number = 100) {
 
 export function Terminal() {
   const ref = createRef<HTMLDivElement>();
+
+  const fitAddon = new FitAddon();
+  const unicodeAddon = new Unicode11Addon();
+
   useEffect(() => {
-    console.log("called once!");
     const socketEndpoint = "ws://localhost:8081/attach";
 
-    // const term = new XTermTerminal({});
+    const term = new XTermTerminal({});
 
     let userID: string | null = null;
     const socket = new WebSocket(socketEndpoint);
 
-    // const getUserID = (e: MessageEvent<string>) => {
-    //   userID = e.data;
-    //   e.stopImmediatePropagation();
-    //   socket.removeEventListener("message", getUserID);
+    const getUserID = (e: MessageEvent<string>) => {
+      userID = e.data;
+      e.stopImmediatePropagation();
+      socket.removeEventListener("message", getUserID);
 
-    //   // once we have the user id, listen for resize events
-    //   term.onResize(async ({ rows, cols }) => {
-    //     console.log("resize cb!", userID, rows, cols);
-    //     const response = await fetch(
-    //       `http://localhost:8081/resize?width=${cols}&height=${rows}&user-id=${userID}`
-    //     );
-    //     if (response.status !== 200) {
-    //       const body = await response.text();
-    //       alert(`invalid resize response: ${body}`);
-    //     }
-    //   });
-    // };
-    // socket.addEventListener("message", getUserID);
+      // once we have the user id, listen for resize events
+      term.onResize(async ({ rows, cols }) => {
+        console.log("resize cb!", userID, rows, cols);
+        const response = await fetch(
+          `http://localhost:8081/resize?width=${cols}&height=${rows}&user-id=${userID}`
+        );
+        if (response.status !== 200) {
+          const body = await response.text();
+          alert(`invalid resize response: ${body}`);
+        }
+      });
+    };
+    socket.addEventListener("message", getUserID);
 
-    // const attachAddon = new AttachAddon(socket);
-    // const fitAddon = new FitAddon();
-    // const unicodeAddon = new Unicode11Addon();
-    // term.loadAddon(fitAddon);
-    // term.loadAddon(attachAddon);
-    // term.loadAddon(unicodeAddon);
+    const attachAddon = new AttachAddon(socket);
+    term.loadAddon(fitAddon);
+    term.loadAddon(attachAddon);
+    term.loadAddon(unicodeAddon);
 
-    // useOnResizeEnd(() => {
-    //   fitAddon.fit();
-    // });
+    assert(ref.current !== null);
+    term.open(ref.current);
+    fitAddon.fit();
+  });
 
-    // assert(!!ref.current);
-    // term.open(ref.current);
-    // fitAddon.fit();
+  useOnResizeEnd(() => {
+    fitAddon.fit();
   });
 
   // // @ts-ignore

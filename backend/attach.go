@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -17,6 +17,7 @@ import (
 func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 	userID := UserID(uuid.NewString())
 	log.Printf("attach for %q\n", userID)
+
 	conn, err := app.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		panic(err)
@@ -37,12 +38,12 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 		AttachStdin:  true,
 		AttachStderr: true,
 		AttachStdout: true,
-		Detach:       true,
 		Cmd:          []string{"bash"},
 	})
 	if err != nil {
 		panic(err)
 	}
+	log.Printf("[container %s]: created bash process %s", containerID, execResp.ID)
 
 	app.lock.Lock()
 	app.users[userID] = &UserInfo{
@@ -56,21 +57,22 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
+	time.Sleep(1 * time.Second)
 	attachResp, err := app.client.ContainerExecAttach(ctx, execResp.ID, types.ExecStartCheck{
-		Detach: true,
-		Tty:    true,
+		Tty: true,
 	})
 	if err != nil {
 		panic(err)
 	}
 	defer attachResp.Close()
+	log.Printf("[container %s]: attached bash process %s", containerID, execResp.ID)
 
 	if err := app.client.ContainerExecStart(ctx, execResp.ID, types.ExecStartCheck{
-		Detach: true,
-		Tty:    true,
+		Tty: true,
 	}); err != nil {
 		panic(err)
 	}
+	log.Printf("[container %s]: started bash process %s", containerID, execResp.ID)
 
 	var g errgroup.Group
 
@@ -79,20 +81,23 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 		defer conn.Close()
 		buf := make([]byte, 4096)
 		for {
-			// n, err := io.ReadAtLeast(attachResp.Reader, buf, 1)
 			n, err := attachResp.Reader.Read(buf)
 			if err == io.EOF {
+				log.Printf("Container returned EOF\n")
 				return nil
 			}
 			if err != nil {
+				log.Printf("Container read: %s\n", err)
 				return err
 			}
 			if n == 0 {
 				panic("read 0 but no EOF")
 			}
 			if err := conn.WriteMessage(websocket.BinaryMessage, buf[:n]); err != nil {
+				log.Printf("Writing to web: %s", err)
 				return err
 			}
+			// fmt.Printf("Wrote %q to the web\n", buf[:n])
 		}
 	})
 	// read from the socket and write to the container
@@ -103,7 +108,7 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("read %q\n", bytes)
+			// fmt.Printf("read %q from web, ", bytes)
 			n := 0
 			for n < len(bytes) {
 				m, err := attachResp.Conn.Write(bytes)
@@ -112,6 +117,7 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 				}
 				n += m
 			}
+			// fmt.Printf("and wrote to the container\n")
 		}
 	})
 	if err := g.Wait(); err != nil {
@@ -140,18 +146,29 @@ func (app *App) reserveSpotContainer(ctx context.Context, userID UserID) (Contai
 
 	// create a new container
 	createResp, err := app.client.ContainerCreate(ctx, &container.Config{
-		Image:           "kirikou",
-		NetworkDisabled: true,
+		Image:     "kirikou",
+		Tty:       true,
+		OpenStdin: true,
+		// NetworkDisabled: true,
 	}, &container.HostConfig{
-		ReadonlyRootfs: true,
+		// ReadonlyRootfs: true,
 	}, nil, nil, "")
 	if err != nil {
 		return "", err
 	}
+	log.Printf("Created container %s", createResp.ID)
+
+	err = app.client.ContainerStart(ctx, createResp.ID, types.ContainerStartOptions{})
+	if err != nil {
+		return "", err
+	}
+	log.Printf("Started container %s", createResp.ID)
 
 	app.lock.Lock()
 	app.containers[ContainerID(createResp.ID)] = 1
 	app.lock.Unlock()
+
+	time.Sleep(1 * time.Second)
 
 	return ContainerID(createResp.ID), nil
 }
