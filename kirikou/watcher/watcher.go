@@ -27,6 +27,11 @@ type Commit struct {
 	Parents  []string `json:"parents"`
 }
 
+const ERROR_CODE_NO_COMMITS = "no-commits"
+const ERROR_CODE_NO_REPO = "no-repo"
+const ERROR_CODE_USAGE = "usage"
+const ERROR_CODE_UNEXPECTED = "unexpected"
+
 const usage = `usage: ./watcher /path/to/git-repo <gap>
 
 Watches the folder for any fs event (create, rename, remove or write). As soon
@@ -50,6 +55,7 @@ func main() {
 	if err != nil {
 		enc.Encode(map[string]string{
 			"type":    "error",
+			"code":    ERROR_CODE_USAGE,
 			"details": fmt.Sprintf("invalid duration %s: %s", os.Args[2], err),
 		})
 		os.Exit(1)
@@ -83,6 +89,7 @@ func main() {
 			if err != nil {
 				enc.Encode(map[string]interface{}{
 					"type":    "error",
+					"code":    ERROR_CODE_UNEXPECTED,
 					"details": err.Error(),
 				})
 			}
@@ -138,6 +145,33 @@ func printRepoDetails(enc *json.Encoder) error {
 	allChildren := make(map[string]struct{})
 
 	commits := make(map[string]*Commit)
+
+	hasRepo, err := hasGitRepository()
+	if err != nil {
+		return err
+	}
+
+	if !hasRepo {
+		enc.Encode(map[string]interface{}{
+			"type":    "error",
+			"code":    ERROR_CODE_NO_REPO,
+			"details": "no repository found",
+		})
+		return nil
+	}
+
+	head, err := getHead()
+	if err != nil {
+		if execErr, ok := err.(*exec.ExitError); ok && execErr.ExitCode() == 128 {
+			enc.Encode(map[string]interface{}{
+				"type":    "error",
+				"code":    ERROR_CODE_NO_COMMITS,
+				"details": "no commits found",
+			})
+			return nil
+		}
+		return fmt.Errorf("getHead: %w", err)
+	}
 
 	// sparse: don't remove duplicate branches
 	// output:
@@ -202,10 +236,6 @@ func printRepoDetails(enc *json.Encoder) error {
 
 	inferUpwardsRelations(commits, roots)
 
-	head, err := getHead()
-	if err != nil {
-		return fmt.Errorf("getHead: %w", err)
-	}
 	repoDetails := RepoDetails{
 		Commits:  commits,
 		Roots:    roots,
@@ -275,5 +305,17 @@ func inferUpwardsRelations(commits map[string]*Commit, roots []string) {
 			commits[childHash].Parents = append(commits[childHash].Parents, childHash)
 			q = append(q, childHash)
 		}
+	}
+}
+
+func hasGitRepository() (bool, error) {
+	cmd := exec.Command("git", "rev-parse", "--git-dir")
+	err := cmd.Run()
+	if err == nil {
+		return true, nil
+	} else if _, ok := err.(*exec.ExitError); ok {
+		return false, nil
+	} else {
+		return false, err
 	}
 }
