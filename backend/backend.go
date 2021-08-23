@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
 
 	"github.com/docker/docker/client"
@@ -54,9 +56,19 @@ func NewApp() (*App, error) {
 }
 
 func (app *App) Run() {
+
+	cleanup := make(chan os.Signal)
+	signal.Notify(cleanup, os.Interrupt)
+	go func() {
+		<-cleanup
+		app.cleanup()
+		os.Exit(1)
+	}()
+
 	http.HandleFunc("/attach", app.attach)
 	http.HandleFunc("/resize", app.resize)
 	http.HandleFunc("/repo-details", app.repoDetails)
+
 	log.Println("Starting server on localhost:8081")
 	log.Fatal(http.ListenAndServe("localhost:8081", nil))
 }

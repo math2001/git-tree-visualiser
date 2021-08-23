@@ -49,7 +49,7 @@ Containers' root file system is read only.
 
 In every container, there is a script called `watch-git` which, given a username
 watches the `.git` folder at the root of the user's home directory. As a soon as
-file changes in there, the details the front end requires are computed,
+file changes in there, the details needed by the front-end are computed,
 serialized into JSON and then printed to stdout.
 
 It's the host that attaches (reads stdout) to that process when `watch-git` is
