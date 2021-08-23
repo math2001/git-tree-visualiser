@@ -17,9 +17,9 @@ document.addEventListener("DOMContentLoaded", () => {
 // reads the first message (the user id), and no more
 function getUserID(termSocket: WebSocket, userCb: (userID: string) => void) {
   const cb = (e: MessageEvent<string>) => {
-    userCb(e.data);
     e.stopImmediatePropagation();
     termSocket.removeEventListener("message", cb);
+    userCb(e.data);
   };
   termSocket.addEventListener("message", cb);
 }
