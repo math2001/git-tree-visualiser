@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -76,6 +77,8 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 
 	var g errgroup.Group
 
+	var errExpectedClose = errors.New("expected close")
+
 	// read from the container, and write to the socket
 	g.Go(func() error {
 		defer conn.Close()
@@ -87,14 +90,12 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 				return nil
 			}
 			if err != nil {
-				log.Printf("Container read: %s\n", err)
 				return err
 			}
 			if n == 0 {
 				panic("read 0 but no EOF")
 			}
 			if err := conn.WriteMessage(websocket.BinaryMessage, buf[:n]); err != nil {
-				log.Printf("Writing to web: %s", err)
 				return err
 			}
 			// fmt.Printf("Wrote %q to the web\n", buf[:n])
@@ -106,7 +107,13 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 		for {
 			_, bytes, err := conn.ReadMessage()
 			if err != nil {
-				return err
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
+					return err
+				}
+				// otherwise, it's just a that the client left, so we need to clean up
+				// the resources
+				// conn.Close()
+				return errExpectedClose
 			}
 			// fmt.Printf("read %q from web, ", bytes)
 			n := 0
@@ -120,7 +127,10 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 			// fmt.Printf("and wrote to the container\n")
 		}
 	})
-	if err := g.Wait(); err != nil {
+	err = g.Wait()
+	if err != errExpectedClose {
+		log.Printf("[container %s]: cleanly closed", containerID)
+	} else if err != nil {
 		panic(err)
 	}
 }
@@ -131,17 +141,21 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 // ref MAX_USERS_PER_CONTAINER
 func (app *App) reserveSpotContainer(ctx context.Context, userID UserID) (ContainerID, error) {
 	app.lock.Lock()
-	var min ContainerID
+
+	// we try to minimize the number of containers we have
+	// so we fill up the one with the most users on it, but with some room left.
+	var max ContainerID
 	for k, v := range app.containers {
-		if min == "" || v < app.containers[min] {
-			min = k
+		if max == "" || (v > app.containers[max] && v < MAX_USERS_PER_CONTAINER) {
+			max = k
 		}
 	}
 
-	if min != "" && app.containers[min] < MAX_USERS_PER_CONTAINER {
-		app.containers[min] += 1
-		return min, nil
+	if max != "" {
+		app.containers[max] += 1
+		return max, nil
 	}
+
 	app.lock.Unlock()
 
 	// create a new container
@@ -176,6 +190,8 @@ func (app *App) reserveSpotContainer(ctx context.Context, userID UserID) (Contai
 func (app *App) releaseSpotContainer(containerID ContainerID) {
 	app.lock.Lock()
 	defer app.lock.Unlock()
+
+	// TODO: remove empty containers if there are some containers with some space left
 
 	_, ok := app.containers[containerID]
 	if !ok {
