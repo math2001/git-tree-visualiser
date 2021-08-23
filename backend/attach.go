@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -78,6 +79,8 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 
 	var errExpectedClose = errors.New("expected close")
 
+	cleanlyClosingAttachResp := make(chan struct{})
+
 	// read from the container, and write to the socket
 	g.Go(func() error {
 		defer conn.Close()
@@ -89,25 +92,36 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 				return nil
 			}
 			if err != nil {
-				return err
+				select {
+				case <-cleanlyClosingAttachResp:
+					return errExpectedClose
+				default:
+					return fmt.Errorf("container->socket reading: %w", err)
+				}
 			}
 			if n == 0 {
 				panic("read 0 but no EOF")
 			}
 			if err := conn.WriteMessage(websocket.BinaryMessage, buf[:n]); err != nil {
-				return err
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
+					return fmt.Errorf("container->socket writing: %w", err)
+				}
+				return errExpectedClose
 			}
 			// fmt.Printf("Wrote %q to the web\n", buf[:n])
 		}
 	})
 	// read from the socket and write to the container
 	g.Go(func() error {
-		defer attachResp.Close()
+		defer func() {
+			close(cleanlyClosingAttachResp)
+			attachResp.Close()
+		}()
 		for {
 			_, bytes, err := conn.ReadMessage()
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
-					return err
+					return fmt.Errorf("socket->container: %w", err)
 				}
 				// otherwise, it's just a that the client left, so we need to clean up
 				// the resources
@@ -127,10 +141,13 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 	err = g.Wait()
-	if err != errExpectedClose {
+	if err == errExpectedClose {
 		log.Printf("[container %s]: cleanly closed", containerID)
 	} else if err != nil {
-		panic(err)
+		if closeErr, ok := err.(*websocket.CloseError); ok {
+			panic(fmt.Sprintf("CloseError: (code=%d text=%q): %s", closeErr.Code, closeErr.Text, closeErr.Error()))
+		}
+		panic(fmt.Sprintf("not close error: %s\n", err))
 	}
 }
 
