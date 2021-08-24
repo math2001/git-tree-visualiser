@@ -212,7 +212,9 @@ func printRepoDetails(enc *json.Encoder) error {
 		commits[hash] = &Commit{
 			Message:  message,
 			Children: children,
-			Parents:  nil,
+			// not nil, because otherwise this gets convert to null in JSON, and
+			// not an empty array
+			Parents: make([]string, 0),
 		}
 
 		allHashes[hash] = struct{}{}
