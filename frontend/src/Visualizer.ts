@@ -44,7 +44,7 @@ export class Visualizer {
     const rect = this.canvas.getBoundingClientRect();
     this.canvas.width = rect.width;
     this.canvas.height = rect.height;
-    renderGraph(this.context, this.details);
+    if (this.details !== undefined) renderGraph(this.context, this.details);
   };
 }
 
