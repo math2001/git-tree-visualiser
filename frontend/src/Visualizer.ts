@@ -7,6 +7,7 @@ const commitRadius = 16;
 
 export class Visualizer {
   static canvas: HTMLCanvasElement;
+  static context: CanvasRenderingContext2D;
   static socket: WebSocket;
   static details: RepoDetails;
 
@@ -17,6 +18,7 @@ export class Visualizer {
 
     const context = canvas.getContext("2d");
     assert(context !== null);
+    this.context = context;
 
     this.socket = new WebSocket("ws://localhost:8081/repo-details");
     this.socket.onmessage = (ev: MessageEvent<string>) => {
@@ -34,13 +36,16 @@ export class Visualizer {
       this.socket.send(userID);
     };
 
-    window.addEventListener("resize", () => {
-      const rect = this.canvas.getBoundingClientRect();
-      this.canvas.width = rect.width;
-      this.canvas.height = rect.height;
-      renderGraph(context, this.details);
-    });
+    window.addEventListener("resize", this.fit);
+    this.fit();
   }
+
+  static fit = () => {
+    const rect = this.canvas.getBoundingClientRect();
+    this.canvas.width = rect.width;
+    this.canvas.height = rect.height;
+    renderGraph(this.context, this.details);
+  };
 }
 
 function renderGraph(context: CanvasRenderingContext2D, details: RepoDetails) {
