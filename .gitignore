@@ -32,3 +32,4 @@ backend/live/
 *.pycbackend/backend
 kirikou/manager
 
+git-tree-visualiser.code-workspace
