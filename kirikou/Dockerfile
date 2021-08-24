@@ -8,4 +8,6 @@ RUN chmod +x install.sh
 RUN ./install.sh
 RUN rm install.sh
 
+COPY watcher/watcher /watcher
+
 CMD ["bash"]

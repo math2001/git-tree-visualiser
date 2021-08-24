@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"reflect"
 
@@ -41,6 +42,7 @@ func (app *App) repoDetails(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
+	log.Printf("[user %s]: started watcher", userID)
 
 	app.lock.Lock()
 	app.users[userID].WatcherExecID = ExecID(execID)
@@ -53,6 +55,7 @@ func (app *App) repoDetails(w http.ResponseWriter, r *http.Request) {
 
 	var details interface{}
 	var prevDetails interface{}
+loop:
 	for {
 		// we don't care about what are the repository details, we just know it
 		// has to be one object
@@ -70,7 +73,7 @@ func (app *App) repoDetails(w http.ResponseWriter, r *http.Request) {
 			if !websocket.IsCloseError(err, websocket.CloseGoingAway) {
 				panic(err)
 			}
-			break
+			break loop
 		}
 	}
 
@@ -81,6 +84,7 @@ func (app *App) repoDetails(w http.ResponseWriter, r *http.Request) {
 	app.users[userID].WatcherExecID = ""
 	app.lock.Unlock()
 
+	log.Printf("[user %s]: stopped watcher", userID)
 }
 
 func startWatcher(client *client.Client, userInfos *UserInfo) (types.HijackedResponse, string, error) {
@@ -89,9 +93,11 @@ func startWatcher(client *client.Client, userInfos *UserInfo) (types.HijackedRes
 	ctx := context.Background()
 	execResp, err := client.ContainerExecCreate(ctx, string(userInfos.ContainerID), types.ExecConfig{
 		Tty:          true,
+		User:         fmt.Sprintf("runner-%d", userInfos.RunnerNumber),
 		AttachStderr: true,
 		AttachStdout: true,
-		Cmd:          []string{"/watcher", fmt.Sprintf("/home/runner-%d/", userInfos.RunnerNumber)},
+		AttachStdin:  true,
+		Cmd:          []string{"/watcher", fmt.Sprintf("/home/runner-%d/", userInfos.RunnerNumber), "500ms"},
 	})
 	if err != nil {
 		return attachResp, "", err
