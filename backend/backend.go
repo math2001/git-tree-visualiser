@@ -62,7 +62,7 @@ func (app *App) Run() {
 
 	http.HandleFunc("/attach", app.attach)
 	http.HandleFunc("/resize", app.resize)
-	// http.HandleFunc("/repo-details", app.repoDetails)
+	http.HandleFunc("/repo-details", app.repoDetails)
 
 	log.Println("Starting server on localhost:8081")
 	log.Fatal(http.ListenAndServe("localhost:8081", nil))
