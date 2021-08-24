@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"reflect"
@@ -53,7 +54,10 @@ loop:
 	for {
 		// we don't care about what are the repository details, we just know it
 		// has to be one object
-		if err := decoder.Decode(&details); err != nil {
+		err := decoder.Decode(&details)
+		if err == io.EOF {
+			break loop
+		} else if err != nil {
 			panic(err)
 		}
 
