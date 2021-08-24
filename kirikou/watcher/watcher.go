@@ -76,6 +76,7 @@ func main() {
 		})
 		os.Exit(1)
 	}
+	analyse(enc)
 
 	stdin := make(chan struct{})
 	go readFromStdin(stdin)
@@ -85,17 +86,21 @@ func main() {
 			os.Exit(0)
 		case <-signal:
 			drainTillGap(signal, gap)
-			err := printRepoDetails(enc)
-			if err != nil {
-				enc.Encode(map[string]interface{}{
-					"type":    "error",
-					"code":    ERROR_CODE_UNEXPECTED,
-					"details": err.Error(),
-				})
-			}
+			analyse(enc)
 		}
 	}
 
+}
+
+func analyse(enc *json.Encoder) {
+	err := printRepoDetails(enc)
+	if err != nil {
+		enc.Encode(map[string]interface{}{
+			"type":    "error",
+			"code":    ERROR_CODE_UNEXPECTED,
+			"details": err.Error(),
+		})
+	}
 }
 
 // close stdin channel as soon as we can read on stdin (or it is closed)
