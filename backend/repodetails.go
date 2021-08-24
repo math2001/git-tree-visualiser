@@ -3,15 +3,19 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"reflect"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/gorilla/websocket"
 )
+
+const LOG_WATCHER = false
 
 func (app *App) repoDetails(w http.ResponseWriter, r *http.Request) {
 	// this function returns as soon as the web socket is closed
@@ -43,10 +47,24 @@ func (app *App) repoDetails(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("[user %s]: started watcher", userID)
 
+	var reader io.Reader
+	if LOG_WATCHER {
+		f, err := os.OpenFile("/tmp/log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			panic(err)
+		}
+		defer f.Close()
+		fmt.Fprintf(f, "start new watcher")
+		defer fmt.Fprintf(f, "closed a watcher")
+		reader = io.TeeReader(attachResp.Conn, f)
+	} else {
+		reader = attachResp.Reader
+	}
+
 	// we can't just copy the output of attachResp.Conn (stream of bytes) to the
 	// web socket (stream of messages) blindly, because the front end expects
 	// each message to be the entire repository details object.
-	decoder := json.NewDecoder(attachResp.Conn)
+	decoder := json.NewDecoder(reader)
 
 	var details interface{}
 	var prevDetails interface{}
