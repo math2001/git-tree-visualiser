@@ -12,3 +12,5 @@ echo "You can read the tutorial if you're unsure what to try." >> README.md
 
 git add README.md 
 git commit -q -m "initial commit"
+
+echo 'PS1="\$ "' >> ~/.bashrc
