@@ -12,7 +12,7 @@ func (app *App) cleanup() {
 	// for now, just kill every container, don't bother about closing sockets
 	// properly
 	ctx := context.Background()
-	for containerID := range app.containers {
+	for _, containerID := range app.users {
 		err := app.client.ContainerKill(ctx, string(containerID), "KILL")
 		if err != nil {
 			log.Println("Killing container", containerID, err)
@@ -22,5 +22,6 @@ func (app *App) cleanup() {
 			log.Println("Removing container", containerID, err)
 		}
 	}
+	log.Printf("Clean up %d containers", len(app.users))
 	app.lock.Unlock()
 }

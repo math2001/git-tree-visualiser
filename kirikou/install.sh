@@ -1,21 +1,24 @@
 #!/bin/bash
 
-if test "$(hostname)" = "inspirux"
-then
-        echo "running on host machine, this should run on the kirikou instance containers"
-        exit
+if test "$(hostname)" = "inspirux"; then
+    echo "running on host machine, this should run on the kirikou instance containers"
+    exit
 fi
 
-NUMBER_USER=100
+useradd --create-home --system runner
 
-addgroup runners
+git config --global user.name runner
+git config --global user.email "runner@gitgraph.viz"
 
-for ((i=0; i<$NUMBER_USER;i++))
-do
-        useradd --create-home --groups=runners --no-user-group --system "runner-$i"
-        chmod 700 "/home/runner-$i"
-        su -c "bash /setup-user.sh" "runner-$i"
-done
+cd /home/runner
+mkdir repo
+cd repo
+git init -q
 
-echo "umask u=rwx,g=,o=" >> /etc/profile.d/02-set-umask.sh
-rm /setup-user.sh
+echo "Make some commits!" >> README.md
+echo >> README.md
+echo "You can read the tutorial if you're unsure what to try." >> README.md
+
+git add README.md 
+git commit -q -m "initial commit"
+

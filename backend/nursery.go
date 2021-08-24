@@ -33,8 +33,9 @@ func (n *Nursery) Go(w Worker) {
 
 	n.wg.Add(1)
 	go func(w Worker) {
-		defer n.wg.Done()
-		n.errs <- w()
+		result := w()
+		n.wg.Done()
+		n.errs <- result
 	}(w)
 }
 
@@ -42,12 +43,16 @@ func (n *Nursery) Go(w Worker) {
 func (n *Nursery) Wait() []error {
 	n.hasWaited = true
 	n.wg.Wait()
-	close(n.errs)
 
 	var errs []error
-
-	for err := range n.errs {
-		errs = append(errs, err)
+loop:
+	for {
+		select {
+		case err := <-n.errs:
+			errs = append(errs, err)
+		default:
+			break loop
+		}
 	}
 
 	rand.Shuffle(len(errs), func(i, j int) {

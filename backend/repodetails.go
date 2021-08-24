@@ -1,127 +1,114 @@
 package main
 
-import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"log"
-	"net/http"
-	"reflect"
+// func (app *App) repoDetails(w http.ResponseWriter, r *http.Request) {
+// 	// this function returns as soon as the web socket is closed
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
-	"github.com/gorilla/websocket"
-)
+// 	wsconn, err := app.upgrader.Upgrade(w, r, nil)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	defer wsconn.Close()
 
-func (app *App) repoDetails(w http.ResponseWriter, r *http.Request) {
-	// this function returns as soon as the web socket is closed
+// 	_, message, err := wsconn.ReadMessage()
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	userID := UserID(message)
 
-	wsconn, err := app.upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		panic(err)
-	}
-	defer wsconn.Close()
+// 	app.lock.Lock()
+// 	userInfos, ok := app.users[userID]
+// 	app.lock.Unlock()
 
-	_, message, err := wsconn.ReadMessage()
-	if err != nil {
-		panic(err)
-	}
-	userID := UserID(message)
+// 	if !ok {
+// 		w.WriteHeader(http.StatusUnauthorized)
+// 		json.NewEncoder(w).Encode(map[string]interface{}{"details": "invalid user id"})
+// 		return
+// 	}
 
-	app.lock.Lock()
-	userInfos, ok := app.users[userID]
-	app.lock.Unlock()
+// 	attachResp, execID, err := startWatcher(app.client, userInfos)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	log.Printf("[user %s]: started watcher", userID)
 
-	if !ok {
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]interface{}{"details": "invalid user id"})
-		return
-	}
+// 	app.lock.Lock()
+// 	app.users[userID].WatcherExecID = ExecID(execID)
+// 	app.lock.Unlock()
 
-	attachResp, execID, err := startWatcher(app.client, userInfos)
-	if err != nil {
-		panic(err)
-	}
-	log.Printf("[user %s]: started watcher", userID)
+// 	// we can't just copy the output of attachResp.Conn (stream of bytes) to the
+// 	// web socket (stream of messages) blindly, because the front end expects
+// 	// each message to be the entire repository details object.
+// 	decoder := json.NewDecoder(attachResp.Conn)
 
-	app.lock.Lock()
-	app.users[userID].WatcherExecID = ExecID(execID)
-	app.lock.Unlock()
+// 	var details interface{}
+// 	var prevDetails interface{}
+// loop:
+// 	for {
+// 		// we don't care about what are the repository details, we just know it
+// 		// has to be one object
+// 		if err := decoder.Decode(&details); err != nil {
+// 			panic(err)
+// 		}
 
-	// we can't just copy the output of attachResp.Conn (stream of bytes) to the
-	// web socket (stream of messages) blindly, because the front end expects
-	// each message to be the entire repository details object.
-	decoder := json.NewDecoder(attachResp.Conn)
+// 		// don't send if there haven't been any change we care about
+// 		if reflect.DeepEqual(details, prevDetails) {
+// 			continue
+// 		}
+// 		prevDetails = details
 
-	var details interface{}
-	var prevDetails interface{}
-loop:
-	for {
-		// we don't care about what are the repository details, we just know it
-		// has to be one object
-		if err := decoder.Decode(&details); err != nil {
-			panic(err)
-		}
+// 		if err := wsconn.WriteJSON(details); err != nil {
+// 			if !websocket.IsCloseError(err, websocket.CloseGoingAway) {
+// 				panic(err)
+// 			}
+// 			break loop
+// 		}
+// 	}
 
-		// don't send if there haven't been any change we care about
-		if reflect.DeepEqual(details, prevDetails) {
-			continue
-		}
-		prevDetails = details
+// 	// stop the watcher (this closes the stdin, which the watcher detects)
+// 	attachResp.Close()
 
-		if err := wsconn.WriteJSON(details); err != nil {
-			if !websocket.IsCloseError(err, websocket.CloseGoingAway) {
-				panic(err)
-			}
-			break loop
-		}
-	}
+// 	app.lock.Lock()
+// 	app.users[userID].WatcherExecID = ""
+// 	app.lock.Unlock()
 
-	// stop the watcher (this closes the stdin, which the watcher detects)
-	attachResp.Close()
+// 	log.Printf("[user %s]: stopped watcher", userID)
+// }
 
-	app.lock.Lock()
-	app.users[userID].WatcherExecID = ""
-	app.lock.Unlock()
+// func startWatcher(client *client.Client, userInfos *UserInfo) (types.HijackedResponse, string, error) {
 
-	log.Printf("[user %s]: stopped watcher", userID)
-}
+// 	var attachResp types.HijackedResponse
+// 	ctx := context.Background()
+// 	execResp, err := client.ContainerExecCreate(ctx, string(userInfos.ContainerID), types.ExecConfig{
+// 		Tty:          true,
+// 		User:         fmt.Sprintf("runner-%d", userInfos.RunnerNumber),
+// 		AttachStderr: true,
+// 		AttachStdout: true,
+// 		AttachStdin:  true,
+// 		Cmd:          []string{"/watcher", fmt.Sprintf("/home/runner-%d/repo/", userInfos.RunnerNumber), "500ms"},
+// 	})
+// 	if err != nil {
+// 		return attachResp, "", err
+// 	}
 
-func startWatcher(client *client.Client, userInfos *UserInfo) (types.HijackedResponse, string, error) {
+// 	execID := execResp.ID
 
-	var attachResp types.HijackedResponse
-	ctx := context.Background()
-	execResp, err := client.ContainerExecCreate(ctx, string(userInfos.ContainerID), types.ExecConfig{
-		Tty:          true,
-		User:         fmt.Sprintf("runner-%d", userInfos.RunnerNumber),
-		AttachStderr: true,
-		AttachStdout: true,
-		AttachStdin:  true,
-		Cmd:          []string{"/watcher", fmt.Sprintf("/home/runner-%d/repo/", userInfos.RunnerNumber), "500ms"},
-	})
-	if err != nil {
-		return attachResp, "", err
-	}
+// 	attachResp, err = client.ContainerExecAttach(ctx, execID, types.ExecStartCheck{Tty: true})
+// 	if err != nil {
+// 		return attachResp, "", err
+// 	}
 
-	execID := execResp.ID
+// 	err = client.ContainerExecStart(ctx, execID, types.ExecStartCheck{Tty: true})
+// 	if err != nil {
+// 		return attachResp, "", err
+// 	}
 
-	attachResp, err = client.ContainerExecAttach(ctx, execID, types.ExecStartCheck{Tty: true})
-	if err != nil {
-		return attachResp, "", err
-	}
+// 	return attachResp, execID, nil
+// }
 
-	err = client.ContainerExecStart(ctx, execID, types.ExecStartCheck{Tty: true})
-	if err != nil {
-		return attachResp, "", err
-	}
-
-	return attachResp, execID, nil
-}
-
-func (app *App) makeUserNotifChannelIfNeeded(userID UserID) {
-	app.lock.Lock()
-	defer app.lock.Unlock()
-	if app.users[userID].Channel == nil {
-		app.users[userID].Channel = make(chan struct{})
-	}
-}
+// func (app *App) makeUserNotifChannelIfNeeded(userID UserID) {
+// 	app.lock.Lock()
+// 	defer app.lock.Unlock()
+// 	if app.users[userID].Channel == nil {
+// 		app.users[userID].Channel = make(chan struct{})
+// 	}
+// }
