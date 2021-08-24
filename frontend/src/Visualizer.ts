@@ -108,14 +108,33 @@ function renderGraph(context: CanvasRenderingContext2D, details: RepoDetails) {
       assert(x !== undefined);
       assert(y !== undefined);
       rendered[hash] = { x, y };
-      renderCommitAndLinks(
-        context,
-        details,
-        hash,
-        { x, y },
-        parents.map((h) => rendered[h])
-      );
+      // renderCommitAndLinks(
+      //   context,
+      //   details,
+      //   hash,
+      //   { x, y },
+      //   parents.map((h) => rendered[h])
+      // );
     }
+    for (let child of details.commits[hash].children) {
+      queue.push(child);
+    }
+  }
+
+  // actually do render
+  queue.length = 0;
+  queue.push(details.roots[0]);
+  while (queue.length > 0) {
+    const hash = queue.pop();
+    assert(hash !== undefined);
+
+    renderCommitAndLinks(
+      context,
+      details,
+      hash,
+      rendered[hash],
+      details.commits[hash].parents.map((h) => rendered[h])
+    );
     for (let child of details.commits[hash].children) {
       queue.push(child);
     }
