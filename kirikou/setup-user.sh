@@ -11,6 +11,14 @@ echo >> README.md
 echo "You can read the tutorial if you're unsure what to try." >> README.md
 
 git add README.md 
-git commit -q -m "initial commit"
+git commit -q -m A
 
-echo 'PS1="\$ "' >> ~/.bashrc
+cat >> ~/.bashrc <<'EOF'
+PS1='\$ '
+
+commit() {
+    touch $1
+    git add $1
+    git commit -m $1
+}
+EOF

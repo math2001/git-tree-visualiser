@@ -9,3 +9,5 @@ useradd --create-home --system runner
 
 su -c 'bash /setup-user.sh' runner
 rm /setup-user.sh
+
+chmod -R +x /samples/
