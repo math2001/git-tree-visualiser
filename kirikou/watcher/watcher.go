@@ -64,7 +64,7 @@ func main() {
 	if err := os.Chdir(os.Args[1]); err != nil {
 		enc.Encode(map[string]string{
 			"type":    "error",
-			"details": fmt.Sprintf("chdir: %w", err),
+			"details": fmt.Sprintf("chdir: %s", err),
 		})
 		os.Exit(1)
 	}

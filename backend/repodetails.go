@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -49,13 +50,21 @@ func (app *App) repoDetails(w http.ResponseWriter, r *http.Request) {
 	// web socket (stream of messages) blindly, because the front end expects
 	// each message to be the entire repository details object.
 	decoder := json.NewDecoder(attachResp.Conn)
+
+	var details interface{}
+	var prevDetails interface{}
 	for {
 		// we don't care about what are the repository details, we just know it
-		// has to be on object
-		var details interface{}
+		// has to be one object
 		if err := decoder.Decode(&details); err != nil {
 			panic(err)
 		}
+
+		// don't send if there haven't been any change we care about
+		if reflect.DeepEqual(details, prevDetails) {
+			continue
+		}
+		prevDetails = details
 
 		if err := wsconn.WriteJSON(details); err != nil {
 			if !websocket.IsCloseError(err, websocket.CloseGoingAway) {
@@ -109,7 +118,4 @@ func (app *App) makeUserNotifChannelIfNeeded(userID UserID) {
 	if app.users[userID].Channel == nil {
 		app.users[userID].Channel = make(chan struct{})
 	}
-}
-
-func (app *App) ensureValidUserID(w http.ResponseWriter, userID UserID) UserInfo {
 }
