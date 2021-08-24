@@ -304,7 +304,7 @@ func inferUpwardsRelations(commits map[string]*Commit, roots []string) {
 		hash := q[0]
 		q = q[1:]
 		for _, childHash := range commits[hash].Children {
-			commits[childHash].Parents = append(commits[childHash].Parents, childHash)
+			commits[childHash].Parents = append(commits[childHash].Parents, hash)
 			q = append(q, childHash)
 		}
 	}
