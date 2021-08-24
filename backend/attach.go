@@ -35,20 +35,24 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 	}
 	defer killAndRemoveContainer(ctx, app.client, containerID)
 
+	attachResp, shellExecID, err := createAndStartShell(ctx, app.client, containerID)
+	if err != nil {
+		panic(err)
+	}
+	defer attachResp.Close()
+
 	app.lock.Lock()
-	app.users[userID] = containerID
+	app.users[userID] = &UserInfos{
+		ContainerID: containerID,
+		ShellExecID: shellExecID,
+	}
 	app.lock.Unlock()
+
 	defer func() {
 		app.lock.Lock()
 		delete(app.users, userID)
 		app.lock.Unlock()
 	}()
-
-	attachResp, err := createAndStartShell(ctx, app.client, containerID)
-	if err != nil {
-		panic(err)
-	}
-	defer attachResp.Close()
 
 	// send the user id
 	if err := wsconn.WriteMessage(websocket.TextMessage, []byte(userID)); err != nil {
@@ -100,7 +104,7 @@ func killAndRemoveContainer(ctx context.Context, client *client.Client, containe
 	return nil
 }
 
-func createAndStartShell(ctx context.Context, client *client.Client, containerID string) (types.HijackedResponse, error) {
+func createAndStartShell(ctx context.Context, client *client.Client, containerID string) (types.HijackedResponse, string, error) {
 	execResp, err := client.ContainerExecCreate(ctx, string(containerID), types.ExecConfig{
 		User:         "runner",
 		WorkingDir:   "/home/runner/repo",
@@ -111,7 +115,7 @@ func createAndStartShell(ctx context.Context, client *client.Client, containerID
 		Cmd:          []string{"bash", "--login"},
 	})
 	if err != nil {
-		return types.HijackedResponse{}, err
+		return types.HijackedResponse{}, "", err
 	}
 	log.Printf("[container %s]: created shell", containerID)
 
@@ -119,18 +123,18 @@ func createAndStartShell(ctx context.Context, client *client.Client, containerID
 		Tty: true,
 	})
 	if err != nil {
-		return types.HijackedResponse{}, err
+		return types.HijackedResponse{}, "", err
 	}
 	log.Printf("[container %s]: attached shell", containerID)
 
 	if err := client.ContainerExecStart(ctx, execResp.ID, types.ExecStartCheck{
 		Tty: true,
 	}); err != nil {
-		return types.HijackedResponse{}, err
+		return types.HijackedResponse{}, "", err
 	}
 	log.Printf("[container %s]: started shell", containerID)
 
-	return attachResp, nil
+	return attachResp, execResp.ID, nil
 }
 
 func bidirectionalCopy(ctx context.Context, attachResp types.HijackedResponse, wsconn *websocket.Conn) error {

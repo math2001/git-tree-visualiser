@@ -22,10 +22,14 @@ const MAX_USERS_PER_CONTAINER = 100
 type App struct {
 	client *client.Client
 
-	lock  sync.Mutex        // protect users
-	users map[string]string // user ID -> container ID
+	lock  sync.Mutex            // protect users
+	users map[string]*UserInfos // user ID -> container ID
 
 	upgrader *websocket.Upgrader
+}
+type UserInfos struct {
+	ContainerID string
+	ShellExecID string
 }
 
 func NewApp() (*App, error) {
@@ -36,7 +40,7 @@ func NewApp() (*App, error) {
 
 	return &App{
 		client: client,
-		users:  make(map[string]string),
+		users:  make(map[string]*UserInfos),
 		upgrader: &websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				// TODO: actually check if the origin is valid
@@ -57,7 +61,7 @@ func (app *App) Run() {
 	}()
 
 	http.HandleFunc("/attach", app.attach)
-	// http.HandleFunc("/resize", app.resize)
+	http.HandleFunc("/resize", app.resize)
 	// http.HandleFunc("/repo-details", app.repoDetails)
 
 	log.Println("Starting server on localhost:8081")
