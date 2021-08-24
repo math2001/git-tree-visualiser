@@ -14,7 +14,7 @@ import (
 )
 
 func (app *App) repoDetails(w http.ResponseWriter, r *http.Request) {
-	// this function exits as soon as the web socket is closed
+	// this function returns as soon as the web socket is closed
 
 	wsconn, err := app.upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -97,7 +97,7 @@ func startWatcher(client *client.Client, userInfos *UserInfo) (types.HijackedRes
 		AttachStderr: true,
 		AttachStdout: true,
 		AttachStdin:  true,
-		Cmd:          []string{"/watcher", fmt.Sprintf("/home/runner-%d/", userInfos.RunnerNumber), "500ms"},
+		Cmd:          []string{"/watcher", fmt.Sprintf("/home/runner-%d/repo/", userInfos.RunnerNumber), "500ms"},
 	})
 	if err != nil {
 		return attachResp, "", err

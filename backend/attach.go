@@ -36,7 +36,7 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 
 	execResp, err := app.client.ContainerExecCreate(ctx, string(containerID), types.ExecConfig{
 		User:         fmt.Sprintf("runner-%d", runnerNumber),
-		WorkingDir:   fmt.Sprintf("/home/runner-%d", runnerNumber),
+		WorkingDir:   fmt.Sprintf("/home/runner-%d/repo", runnerNumber),
 		Tty:          true,
 		AttachStdin:  true,
 		AttachStderr: true,
