@@ -1,10 +1,6 @@
 import { Coord, RepoDetails } from "./types";
 import { assert } from "./utils";
 
-interface Props {
-  details: RepoDetails;
-}
-
 const gridSize = { x: 54, y: 64 };
 const offset = { x: 52, y: 42 };
 const commitRadius = 16;
@@ -12,6 +8,7 @@ const commitRadius = 16;
 export class Visualizer {
   static canvas: HTMLCanvasElement;
   static socket: WebSocket;
+  static details: RepoDetails;
 
   static init(userID: string) {
     const canvas = document.querySelector<HTMLCanvasElement>("#visualizer");
@@ -23,13 +20,26 @@ export class Visualizer {
 
     this.socket = new WebSocket("ws://localhost:8081/repo-details");
     this.socket.onmessage = (ev: MessageEvent<string>) => {
+      console.log(ev.data);
       const details = JSON.parse(ev.data);
-      renderGraph(context, details);
+      if (details.type === "error") {
+        console.error(ev.data);
+        return;
+      }
+      this.details = details;
+      renderGraph(context, this.details);
     };
 
     this.socket.onopen = () => {
       this.socket.send(userID);
     };
+
+    window.addEventListener("resize", () => {
+      const rect = this.canvas.getBoundingClientRect();
+      this.canvas.width = rect.width;
+      this.canvas.height = rect.height;
+      renderGraph(context, this.details);
+    });
   }
 }
 

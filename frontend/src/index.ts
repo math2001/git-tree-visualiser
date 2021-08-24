@@ -1,3 +1,4 @@
+import "./index.css";
 import { Terminal } from "./Terminal";
 import { assert } from "./utils";
 import { Visualizer } from "./Visualizer";
