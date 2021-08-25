@@ -139,6 +139,8 @@ function renderGraph(context: CanvasRenderingContext2D, details: RepoDetails) {
       queue.push(child);
     }
   }
+
+  renderBranchNames(context, details, rendered);
 }
 
 function renderCommitAndLinks(
@@ -192,4 +194,30 @@ function renderCommitAndLinks(
   c.stroke();
 
   c.restore();
+}
+
+function renderBranchNames(
+  c: CanvasRenderingContext2D,
+  details: RepoDetails,
+  rendered: { [key: string]: Coord }
+) {
+  const arrowLength = 16;
+  const arrowSpace = 8;
+  for (let [branch, hash] of Object.entries(details.branches)) {
+    c.strokeStyle = "grey";
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(rendered[hash].x + commitRadius + arrowSpace, rendered[hash].y);
+    c.lineTo(
+      rendered[hash].x + commitRadius + arrowSpace + arrowLength,
+      rendered[hash].y
+    );
+    c.stroke();
+    c.textBaseline = "middle";
+    c.fillText(
+      branch,
+      rendered[hash].x + commitRadius + arrowSpace * 2 + arrowLength,
+      rendered[hash].y
+    );
+  }
 }
