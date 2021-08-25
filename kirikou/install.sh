@@ -7,7 +7,7 @@ fi
 
 useradd --create-home --system runner
 
+chmod -R +x /samples/
+
 su -c 'bash /setup-user.sh' runner
 rm /setup-user.sh
-
-chmod -R +x /samples/

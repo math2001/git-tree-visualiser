@@ -22,3 +22,5 @@ commit() {
     git commit -m $1
 }
 EOF
+
+/samples/double-branch.sh
