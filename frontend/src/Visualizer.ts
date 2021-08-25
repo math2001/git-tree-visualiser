@@ -201,25 +201,25 @@ function renderBranchNames(
   details: RepoDetails,
   rendered: { [key: string]: Coord }
 ) {
+  const labels: { [key: string]: string[] } = {}; // hash -> lines
   for (let [branch, hash] of Object.entries(details.branches)) {
-    renderPointerToCommit(
-      c,
-      branch + (branch === details.HEAD ? "\n↑ HEAD" : ""),
-      rendered[hash]
-    );
-    if (branch === details.HEAD) {
-    }
+    if (labels[hash] === undefined) labels[hash] = [];
+    labels[hash].push(branch);
+    if (branch === details.HEAD) labels[hash].push("\n↑ HEAD");
+  }
+  for (let [hash, lines] of Object.entries(labels)) {
+    renderPointerToCommit(c, lines, rendered[hash]);
   }
   if (details.HEAD[0] === "-") {
     // detached head mode
     const hash = details.HEAD.slice(1);
-    renderPointerToCommit(c, "HEAD", rendered[hash]);
+    renderPointerToCommit(c, ["HEAD"], rendered[hash]);
   }
 }
 
 function renderPointerToCommit(
   c: CanvasRenderingContext2D,
-  text: string,
+  lines: string[],
   pos: Coord
 ) {
   c.save();
@@ -234,7 +234,6 @@ function renderPointerToCommit(
   c.stroke();
   c.textBaseline = "middle";
   let y = pos.y;
-  const lines = text.split(/\n/g);
   for (let line of lines) {
     c.fillText(line, pos.x + commitRadius + arrowSpace * 2 + arrowLength, y);
     y += lineHeight;
