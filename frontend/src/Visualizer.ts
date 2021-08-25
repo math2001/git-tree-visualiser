@@ -201,23 +201,43 @@ function renderBranchNames(
   details: RepoDetails,
   rendered: { [key: string]: Coord }
 ) {
+  for (let [branch, hash] of Object.entries(details.branches)) {
+    renderPointerToCommit(
+      c,
+      branch + (branch === details.HEAD ? "\n↑ HEAD" : ""),
+      rendered[hash]
+    );
+    if (branch === details.HEAD) {
+    }
+  }
+  if (details.HEAD[0] === "-") {
+    // detached head mode
+    const hash = details.HEAD.slice(1);
+    renderPointerToCommit(c, "HEAD", rendered[hash]);
+  }
+}
+
+function renderPointerToCommit(
+  c: CanvasRenderingContext2D,
+  text: string,
+  pos: Coord
+) {
+  c.save();
   const arrowLength = 16;
   const arrowSpace = 8;
-  for (let [branch, hash] of Object.entries(details.branches)) {
-    c.strokeStyle = "grey";
-    c.lineWidth = 2;
-    c.beginPath();
-    c.moveTo(rendered[hash].x + commitRadius + arrowSpace, rendered[hash].y);
-    c.lineTo(
-      rendered[hash].x + commitRadius + arrowSpace + arrowLength,
-      rendered[hash].y
-    );
-    c.stroke();
-    c.textBaseline = "middle";
-    c.fillText(
-      branch,
-      rendered[hash].x + commitRadius + arrowSpace * 2 + arrowLength,
-      rendered[hash].y
-    );
+  const lineHeight = 15;
+  c.strokeStyle = "grey";
+  c.lineWidth = 2;
+  c.beginPath();
+  c.moveTo(pos.x + commitRadius + arrowSpace, pos.y);
+  c.lineTo(pos.x + commitRadius + arrowSpace + arrowLength, pos.y);
+  c.stroke();
+  c.textBaseline = "middle";
+  let y = pos.y;
+  const lines = text.split(/\n/g);
+  for (let line of lines) {
+    c.fillText(line, pos.x + commitRadius + arrowSpace * 2 + arrowLength, y);
+    y += lineHeight;
   }
+  c.restore();
 }
