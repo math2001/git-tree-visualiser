@@ -297,7 +297,18 @@ func getHead() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(bytes.TrimSpace(output)), nil
+	head := string(bytes.TrimSpace(output))
+	if head != "HEAD" {
+		return head, nil
+	}
+	// otherwise, detached head, we get the actual commit
+	cmd = exec.Command("git", "rev-parse", "HEAD")
+	output, err = cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	hash := string(bytes.TrimSpace(output))
+	return "-" + hash, nil // branch names aren't allowed to start with a -
 }
 
 // build the repo upwards to (we have relations from parent to children,
