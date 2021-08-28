@@ -1,14 +1,16 @@
 import "./index.css";
 import { Terminal } from "./Terminal";
-import { assert } from "./utils";
 import { Visualizer } from "./Visualizer";
 import "./xterm.css";
 
 document.addEventListener("DOMContentLoaded", () => {
-  const root = document.querySelector("#app-root");
-  assert(root !== null);
-
   const termSocket = new WebSocket("ws://localhost:8081/attach");
+  termSocket.addEventListener("error", (ev: Event) => {
+    console.error("TermSocket error", ev)
+  })
+  termSocket.addEventListener("close", (ev: Event) => {
+    console.error("TermSocket close", ev)
+  })
   getUserID(termSocket, (userID: string) => {
     Terminal.init(termSocket, userID);
     Visualizer.init(userID);

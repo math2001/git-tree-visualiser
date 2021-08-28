@@ -1,5 +1,5 @@
 import { Coord, RepoDetails } from "./types";
-import { assert } from "./utils";
+import { assert, debounce } from "./utils";
 
 const gridSize = { x: 54, y: 64 };
 const offset = { x: 52, y: 42 };
@@ -36,15 +36,19 @@ export class Visualizer {
       this.socket.send(userID);
     };
 
-    window.addEventListener("resize", this.fit);
+    window.addEventListener("resize", debounce(40, () => this.fit()));
     this.fit();
   }
 
   static fit = () => {
-    const rect = this.canvas.getBoundingClientRect();
+    console.log(this.canvas.parentNode)
+    const rect = this.canvas.parentElement!.getBoundingClientRect();
     this.canvas.width = rect.width;
     this.canvas.height = rect.height;
-    if (this.details !== undefined) renderGraph(this.context, this.details);
+    if (this.details !== undefined) {
+      console.log("resize")
+      renderGraph(this.context, this.details);
+    }
   };
 }
 

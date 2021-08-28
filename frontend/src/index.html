@@ -1,11 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head lang="en">
-  <title>Git Tree Visualiser</title>
+  <title>Git Graph Visualiser</title>
 </html>
 <body>
-  <div id="app-root">
-    <div id="terminal" class="terminal-wrapper"></div>
+  <header class="header">
+    <h3 class="header-title">Git Graph Visualiser</h3>
+    <nav class="header-nav">
+      <ul class="header-list">
+        <li class="tutorial-link" id="tutorial-link"><a href="#">Tutorial</a></li>
+      </ul>
+    </nav>
+    <p class="author"><small><a
+    href="https://github.com/math2001/git-graph-visualiser" target="_blank">math2001/git-graph-visualiser</a>
+    by Mathieu Paturel</small></p>
+  </header>
+  <div id="terminal" class="terminal-wrapper"></div>
+  <div class="visualizer-wrapper">
     <canvas id="visualizer" class="visualizer"></canvas>
   </div>
 </body>

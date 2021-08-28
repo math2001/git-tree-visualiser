@@ -15,6 +15,7 @@ export class Terminal {
     const domNode = document.querySelector<HTMLDivElement>("#terminal");
     assert(domNode !== null);
     this.term.open(domNode);
+    console.log("open")
 
     this.term.onResize(this.resizeTty);
 
@@ -27,7 +28,7 @@ export class Terminal {
 
     window.addEventListener(
       "resize",
-      debounce(() => {
+      debounce(100, () => {
         fitAddon.fit();
       })
     );

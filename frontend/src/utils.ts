@@ -3,10 +3,10 @@ export function assert(condition: boolean): asserts condition {
 }
 
 // https://stackoverflow.com/a/45905199/6164984
-export function debounce(func: (a: any) => any) {
+export function debounce(delayMS: number, func: (a: any) => any) {
   let timer: any;
   return function (event: any) {
     if (timer) clearTimeout(timer);
-    timer = setTimeout(func, 100, event);
+    timer = setTimeout(func, delayMS, event);
   };
 }
