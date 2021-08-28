@@ -1,5 +1,5 @@
 import { Coord, RepoDetails } from "./types";
-import { assert, debounce } from "./utils";
+import { assert, debounce, SERVER_ADDRESS } from "./utils";
 
 const gridSize = { x: 54, y: 64 };
 const offset = { x: 52, y: 42 };
@@ -20,7 +20,7 @@ export class Visualizer {
     assert(context !== null);
     this.context = context;
 
-    this.socket = new WebSocket("ws://localhost:8081/repo-details");
+    this.socket = new WebSocket(`ws://${SERVER_ADDRESS}/repo-details`);
     this.socket.onmessage = (ev: MessageEvent<string>) => {
       console.log(ev.data);
       const details = JSON.parse(ev.data);

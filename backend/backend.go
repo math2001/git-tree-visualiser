@@ -65,7 +65,7 @@ func (app *App) Run() {
 	http.HandleFunc("/repo-details", app.repoDetails)
 
 	log.Println("Starting server on localhost:8081")
-	log.Fatal(http.ListenAndServe("localhost:8081", nil))
+	log.Fatal(http.ListenAndServe(":8081", nil))
 }
 
 func main() {

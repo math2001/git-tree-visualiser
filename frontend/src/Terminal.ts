@@ -2,7 +2,7 @@ import { Terminal as XTerm } from "xterm";
 import { AttachAddon } from "xterm-addon-attach";
 import { FitAddon } from "xterm-addon-fit";
 import { Unicode11Addon } from "xterm-addon-unicode11";
-import { assert, debounce } from "./utils";
+import { assert, debounce, SERVER_ADDRESS } from "./utils";
 
 export class Terminal {
   static term: XTerm;
@@ -37,7 +37,7 @@ export class Terminal {
   }
 
   static resizeTty = async ({ rows, cols }: { rows: number; cols: number }) => {
-    const response = await fetch("http://localhost:8081/resize", {
+    const response = await fetch(`http://${SERVER_ADDRESS}/resize`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

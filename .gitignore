@@ -33,3 +33,4 @@ backend/live/
 kirikou/manager
 
 git-tree-visualiser.code-workspace
+frontend/dist/

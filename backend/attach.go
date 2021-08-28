@@ -69,7 +69,7 @@ func (app *App) attach(w http.ResponseWriter, r *http.Request) {
 
 func createAndStartContainer(ctx context.Context, client *client.Client) (string, error) {
 	createResp, err := client.ContainerCreate(ctx, &container.Config{
-		Image:           "kirikou",
+		Image:           "math2001/kirikou",
 		Tty:             true,
 		OpenStdin:       true,
 		NetworkDisabled: true,

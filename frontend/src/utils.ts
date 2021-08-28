@@ -1,3 +1,5 @@
+export const SERVER_ADDRESS = "localhost:8081"
+
 export function assert(condition: boolean): asserts condition {
   if (!condition) throw new Error("assertion error");
 }

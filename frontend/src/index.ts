@@ -1,10 +1,11 @@
 import "./index.css";
 import { Terminal } from "./Terminal";
+import { SERVER_ADDRESS } from "./utils";
 import { Visualizer } from "./Visualizer";
 import "./xterm.css";
 
 document.addEventListener("DOMContentLoaded", () => {
-  const termSocket = new WebSocket("ws://localhost:8081/attach");
+  const termSocket = new WebSocket(`ws://${SERVER_ADDRESS}/attach`);
   termSocket.addEventListener("error", (ev: Event) => {
     console.error("TermSocket error", ev)
   })
