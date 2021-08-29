@@ -1,4 +1,4 @@
-export const SERVER_ADDRESS = "localhost:8081"
+export const SERVER_ADDRESS = "137.184.41.190:8081"
 
 export function assert(condition: boolean): asserts condition {
   if (!condition) throw new Error("assertion error");
