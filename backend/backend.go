@@ -64,8 +64,8 @@ func (app *App) Run() {
 	http.HandleFunc("/resize", app.resize)
 	http.HandleFunc("/repo-details", app.repoDetails)
 
-	log.Println("Starting server on localhost:8081")
-	log.Fatal(http.ListenAndServe(":8081", nil))
+	log.Println("Starting server on :80")
+	log.Fatal(http.ListenAndServe(":80", nil))
 }
 
 func main() {
